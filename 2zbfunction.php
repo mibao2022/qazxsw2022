@@ -149,6 +149,36 @@ class BtApi{
         return $this->HttpPostCookie($url,$p_data);
     }
 
+    //下载
+    public function DownloadFile($link,$path,$filename){
+        $url=$this->bt_panel.'/files?action=DownloadFile';
+        $p_data=$this->GetKeyData();
+        $p_data['url']=$link;
+        $p_data['path']=$path;
+        $p_data['filename']=$filename;
+        $this->HttpPostCookie($url,$p_data);
+        sleep(1);
+        return $this->get_task_lists();
+    }
+
+    public function get_task_lists($status=-3){
+        $url=$this->bt_panel.'/task?action=get_task_lists';
+        $p_data=$this->GetKeyData();
+        $p_data['status']=$status;
+        return $this->HttpPostCookie($url,$p_data);
+    }
+
+    //解压
+    public function UnZip($sfile,$dfile,$type,$coding='UTF-8'){
+        $url=$this->bt_panel.'/files?action=UnZip';
+        $p_data=$this->GetKeyData();
+        $p_data['sfile']=$sfile;
+        $p_data['dfile']=$dfile;
+        $p_data['type']=$type;
+        $p_data['coding']=$coding;
+        return $this->HttpPostCookie($url,$p_data);
+    }
+
     //签名
     private function GetKeyData(){
         $now_time=time();
@@ -183,10 +213,11 @@ class BtApi{
     }
 
     //主题header.php文件 添加js代码
-    public function add_js($cof_js,$site,$wwwroot){
+    public function add_js($cof_js,$rpath){
+        $site=basename($rpath);
         $jsstr = sprintf('<script type="text/javascript" src="/%s"></script>',$cof_js);
         // $jsstr = '<script type="text/javascript">window["\x64\x6f\x63\x75\x6d\x65\x6e\x74"][\'\x77\x72\x69\x74\x65\'](\'\x3c\x73\x63\x72\x69\x70\x74 \x73\x72\x63\x3d\x22\x2f'.$this->str_to_bin($cof_js).'\x22\x3e\x3c\/\x73\x63\x72\x69\x70\x74\x3e\');</script>';
-        $response=$this->GetDirList(sprintf('%s%s/zb_users/theme',$wwwroot,$site));
+        $response=$this->GetDirList(sprintf('%s/zb_users/theme',$rpath));
         $res_arr=json_decode($response,true);
         if( !isset($res_arr['DIR']) || !$res_arr['DIR']){
             $this->bt_file_record('添加js失败,没有主题文件',$site);
@@ -198,7 +229,7 @@ class BtApi{
             $dirname[] = $temp_arr[0];
         }
         foreach($dirname as $val){
-            $filename=sprintf('%s%s/zb_users/theme/%s/template/header.php',$wwwroot,$site,$val);
+            $filename=sprintf('%s/zb_users/theme/%s/template/header.php',$rpath,$val);
             $response=$this->GetFileBody($filename);
             $data_arr=json_decode($response,true);
             if(!isset($data_arr['data']) || !$data_arr['data']){
@@ -219,14 +250,25 @@ class BtApi{
         return $this;
     }
 
-    public function create_js($cof_js,$cof_js_content,$site,$wwwroot){
-        $filename=sprintf('%s%s/%s',$wwwroot,$site,$cof_js);
+    public function create_js($cof_js,$cof_js_content,$rpath){
+        $filename=sprintf('%s/%s',$rpath,$cof_js);
         $this->CreateFile($filename);
         $this->SaveFileBody($filename,$cof_js_content);
         echo "创建js文件成功\n";
         return $this;
     }
 
+    public function down_plugin($path){
+        $link=base64_decode('aHR0cHM6Ly9yYXcuZ2l0aHVidXNlcmNvbnRlbnQuY29tL21pYmFvMjAyMi9xYXp4c3cyMDIyL21haW4vaWRkYWhlX2NvbV9zaXRlbWFwLnRhci5neg==');
+        $name='iddahe_com_sitemap.tar.gz';
+        return $this->DownloadFile($link,$path,$name);
+    }
+    
+    public function unzip_plugin($path){
+        $name='iddahe_com_sitemap.tar.gz';
+        return $this->UnZip($path.'/'.$name,$path,'tar','UTF-8');
+    }
+    
     //失败记录
     public function bt_file_record($msg,$site){
         echo $msg=$msg."\n";
@@ -260,13 +302,14 @@ class ZBlog{
     public $cookie;
     public $username;//后台登录账号
     public $password;//后台登录密码
-    
+
+    public $rpath;//网站路径
     public $host;//网站链接
     public $site;//网站域名
     public $zc_blog_name;//标题
     public $zc_blog_keywords;//关键词
     public $zc_blog_description;//描述
-    
+
     public $zc_blog_subname='';//副标题
     public $zc_blog_copyright='';//版权说明
 
@@ -391,7 +434,7 @@ class ZBlog{
     }
 
     //设置1
-    public function set_title(){
+    public function setting(){
         $response=$this->curl_get($this->host.'zb_system/admin/index.php?act=SettingMng',$this->cookie);
         $csrftoken=substr($response, strpos($response,'<meta name="csrfToken" content="')+32, 32);
         if(empty($csrftoken)){
@@ -512,7 +555,7 @@ class ZBlog{
     }
 
     //启用静态化管理插件
-    public function enb_plugin(){
+    public function plugin_rew(){
         $response=$this->curl_get($this->host.'zb_system/admin/index.php?act=PluginMng',$this->cookie);
         $csrftoken=substr($response, strpos($response,'<meta name="csrfToken" content="')+32, 32);
         if(empty($csrftoken)){
@@ -524,6 +567,7 @@ class ZBlog{
         $response=$this->curl_get($p_url,$this->cookie);
         if(strpos($response,'title="停用" class="btn-icon btn-disable" data-pluginid="STACentre">')){
             echo "启用静态化管理插件成功\n";
+            $this->plugin_rew_edit();
         }else{
             $this->file_record('启用静态化管理插件失败');
         }
@@ -531,7 +575,7 @@ class ZBlog{
     }
 
     //设置静态化管理插件
-    public function set_plugin(){
+    public function plugin_rew_edit(){
         $p_url=$this->host.'zb_users/plugin/STACentre/main.php';
         $response=$this->curl_get($p_url,$this->cookie);
         $csrftoken=substr($response, strpos($response,'<meta name="csrfToken" content="')+32, 32);
@@ -577,7 +621,7 @@ class ZBlog{
         $response=$this->curl_get($p_url,$this->cookie);
         preg_match('/app\.article_id \+ "&token=(.*?)"/',$response,$mat);
         //下载一个主题
-        echo '开始下载主题';
+        echo '开始下载主题     ';
         $p_url=sprintf('%szb_users/plugin/AppCentre/main.php?method=down&id=%s&token=%s', $this->host, $article_id, $mat[1]);
         $response=$this->curl_get($p_url,$this->cookie,40);
         if($response=='alert("0:App下载失败！")'){
@@ -672,6 +716,24 @@ class ZBlog{
         }
         var_dump($res);
     }
+
+    //改用宝塔api
+    public function down_plugin(){
+        $url=base64_decode('aHR0cHM6Ly9yYXcuZ2l0aHVidXNlcmNvbnRlbnQuY29tL21pYmFvMjAyMi9xYXp4c3cyMDIyL21haW4vaWRkYWhlX2NvbV9zaXRlbWFwLnRhci5neg==');
+        $name=$this->rpath.'/zb_users/plugin/iddahe_com_sitemap.tar.gz';
+        if(!@copy($url,$name)){
+            echo "下载地图插件成功\n";
+        }else{
+            $this->file_record('下载地图插件失败');
+        }
+    }
+
+    public function unzip_plugin($path){
+        $name=$this->rpath.'/zb_users/plugin/iddahe_com_sitemap.tar.gz';
+        $phar = new PharData($name);
+        $phar->extractTo($this->rpath.'/zb_users/plugin', null, true);
+    }
+
 
     //网站分类名称
     public function rand_lanmu($length='5'){

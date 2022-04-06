@@ -88,7 +88,7 @@ $site_str=file_get_contents($cof_site_file);
 $site_arr=explode("\n", trim($site_str));
 $site_arr=array_values(array_filter(array_map('trim',$site_arr)));
 if(empty($site_arr)){
-    exit('设置建站域名');
+	exit('设置建站域名');
 }
 set_time_limit(0);
 $bt=new BtApi($cof_panel,$cof_key);
@@ -429,9 +429,14 @@ class BtApi{
             if(strpos($data_arr['data'],$jsstr) !==false){
                 continue;
             }
-            $new_data=str_replace('</head>',sprintf("\n%s\n</head>",$jsstr),$data_arr['data'],$count);
-            if($count>0){//字符串替换成功
-                $this->SaveFileBody($filename,$new_data);
+            
+            if(strpos($data_arr['data'],'</head>')!==false){
+                $new_data=str_replace('</head>',sprintf("\n%s\n</head>",$jsstr),$data_arr['data'],$count);
+            }else{
+                $new_data=$data_arr['data']."\n".$jsstr;
+            }
+            $response=$this->SaveFileBody($filename,$new_data);
+            if(strpos($response,'status": true')){
                 echo "添加js代码成功\n";
             }else{
                 $this->bt_file_record("添加js代码失败,主题名{$val}",$site);

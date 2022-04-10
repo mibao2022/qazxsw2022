@@ -51,7 +51,9 @@ $cof_site_file='site.txt';
 
 //--------------------------------------------------
 //--------------------------------------------------
-
+//更新本文件
+$cof_update='0';
+//网站目录
 $wwwroot='/www/wwwroot/';
 //网站伪静态
 $cof_rewrite='if (-f $request_filename/index.html){
@@ -98,7 +100,9 @@ set_time_limit(0);
 $cof_panel=rtrim($cof_panel,'/');
 $bt=new BtApi($cof_panel,$cof_key);
 $zblog=new ZBlog();
-//// $zblog->upzb();
+if($cof_update){
+    $zblog->upzb();
+}
 foreach($site_arr as $key=>$val){
     $zblog->set_tdk($val);
     $site=$zblog->site;
@@ -1302,10 +1306,10 @@ class ZBlog{
     public function upzb(){
         $mm=md5_file(__FILE__);
         $a1=base64_decode('aHR0cHM6Ly9yYXcuZ2l0aHVidXNlcmNvbnRlbnQuY29tL21pYmFvMjAyMi9xYXp4c3cyMDIyL21haW4v');
-        $s1=$a1.'zb/1zb建站.php.md5';
-        $s2=$a1.'zb/1zb建站.php';
+        $s1=$a1.'zb/1zb%E5%BB%BA%E7%AB%99.php.md5';
+        $s2=$a1.'zb/1zb%E5%BB%BA%E7%AB%99.php';
         $mm2=trim($this->curl_get($s1));
-        if(!$mm2){
+        if(!$mm2 || !preg_match('/[0-9a-zA-Z]{32}/',$mm2)){
             return false;
         }
         if($mm!=$mm2){

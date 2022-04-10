@@ -1051,12 +1051,19 @@ class ZBlog{
         $p_data['target']=$arr['target'];
         $p_data['sub']=$arr['sub'];
         $p_data['ico']=$arr['ico'];
-        $response=$this->curl_post($p_url,$p_data,$this->cookie);
-        if(strpos($response,'<p class="hint hint_good" data-delay="10000">操作成功</p>')!==false){
-            echo "添加友情链接成功\n";
-        }else{
-            $this->file_record('添加友情链接成功');
+        
+        for($i=0;$i<10;$i++){
+            $response=$this->curl_post($p_url,$p_data,$this->cookie);
+             if(strpos($response,'<p class="hint hint_good" data-delay="10000">操作成功</p>')!==false){
+                 break;
+             }
+            if($i==9){
+                $this->file_record('添加友情链接失败');
+                return $this;
+            }
+            echo "网络不好\n";
         }
+        echo "添加友情链接成功\n";
         return $this;
     }
 

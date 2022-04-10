@@ -6,10 +6,15 @@
 //---------------------------设置开始---------------------------------
 
 //宝塔面板地址
-$cof_panel='http://103.75.12.162:34562/';
+$cof_panel='http://202.165.121.194:8888/';
 
 //宝塔API接口密钥  添加IP白名单到API接口
-$cof_key='pdo5dAg9uSKkxEKhmdQdmX6Oe0sxvXDU';
+$cof_key='PDsc9PQxwlc0Lsjf2luaoJjyN9QuInCB';
+
+//php版本(例7.2版本 写72)(推荐php7.2以上版本)
+$cof_php_v=72;
+
+
 
 //zb网站后台账号
 $cof_username='admin1234';
@@ -17,14 +22,9 @@ $cof_username='admin1234';
 //zb网站后台密码 (8位或更长的数字或字母组合)
 $cof_password='Qq12345678';
 
-//php版本(例7.2版本 写72)(推荐php7.2以上版本)
-$cof_php_v=72;
+//zb网站添加友情链接的数量;0不添加，4代表添加4个;
+$cof_link='6';
 
-//设置建站域名的文件 (内容格式:域名****网站标题****网站关键词****描述)
-$cof_site_file='site.txt';
-
-// 网站副标题
-$cof_subname='首页';
 
 //统计js名称 (创建到站点根目录)
 $cof_js = 'baidu.js';
@@ -33,7 +33,11 @@ $cof_js = 'baidu.js';
 $cof_js_content = <<<'EOTABCD'
 
 
+
 EOTABCD;
+
+//设置建站域名的文件 (内容格式:域名****网站标题****网站副标题****网站关键词****网站描述****网站版权说明)
+$cof_site_file='site.txt';
 //---------------------------设置结束---------------------------------
 
 
@@ -91,11 +95,9 @@ if(empty($site_arr)){
 	exit('设置建站域名');
 }
 set_time_limit(0);
+$cof_panel=rtrim($cof_panel,'/');
 $bt=new BtApi($cof_panel,$cof_key);
 $zblog=new ZBlog();
-if(trim($cof_subname)){
-    $zblog->zc_blog_subname=trim($cof_subname);
-}
 //// $zblog->upzb();
 foreach($site_arr as $key=>$val){
     $zblog->set_tdk($val);
@@ -106,6 +108,7 @@ foreach($site_arr as $key=>$val){
         'username'=>$cof_username,
         'password'=>$cof_password,
     ]);
+    
     
     //创建站点
     echo sprintf("\n------搭建第%s个站点:%s------\n",$key+1,$site);
@@ -149,38 +152,52 @@ foreach($site_arr as $key=>$val){
         continue;
     }
     
-    //地图插件1
+    //下载地图插件
     $plugin_path=$rpath.'/zb_users/plugin';
     $bt->down_plugin_map($plugin_path);
-
-    //设置网站->添加网站分类->删除留言本功能->启用,修改静态化页面插件
+    
+    //网站设置->添加网站分类->删除留言本功能->启用,修改静态化页面插件
     $zblog->setting()->add_category()->del_page()->plugin_rew();
     
-
     
-    //地图插件2
+    //解压地图插件
     $bt->unzip_plugin_map($plugin_path);
+    
+    //删除其他未启用主题
     $bt->SetBatchData(array('WhitePage','Zit','default','os2020'), $rpath.'/zb_users/theme');
+    
+    //启用地图插件
     $zblog->plugin_map();
     
     //seo插件管理
     
-        //下载,启用主题 bool
-    if($zblog->down_theme()){
-        $zblog->set_theme();
+    // //下载随机主题,然后启用 bool
+    // if($zblog->down_theme()){
+    //     $zblog->set_theme();
+    // }
+    
+    
+    //主题设置(tpure主题SEO信息设置)
+    $zblog->tpure_edit();
+    
+    
+    //添加友情链接
+    if($cof_link){
+        $zblog->addlink($zblog->get_rand_link($site_arr,$cof_link));
+        $bt->tpure_addlink($rpath);
     }
+    
+    
     
     
     //添加js代码->创建js文件
     $bt->add_js($cof_js,$rpath)->create_js($cof_js,$cof_js_content,$rpath);
     
-    // $zblog->login();
-    // $zblog->set_theme();
+    
     
 }
 
 echo "\n完成\n";
-
 
 
 
@@ -463,7 +480,32 @@ class BtApi{
         $name='iddahe_com_sitemap.tar.gz';
         return $this->UnZip($path.'/'.$name,$path,'tar','UTF-8');
     }
-    
+
+    //添加代码到tpure主题footer文件;bool
+    public function tpure_addlink($rpath){
+        $filename=$rpath.'/zb_users/theme/tpure/template/footer.php';
+        $addstr='<style>
+.linkli li{display:inline-block;margin-left:8px;}
+</style>
+<div>
+    <h3>友情链接</h3>
+    <p>
+        <ul class="linkli">
+          {module:link}
+        </ul>
+    </p>
+</div>
+';
+        $response=$this->GetFileBody($filename);
+        $data_arr=json_decode($response,true);
+        if(!isset($data_arr['data']) || !$data_arr['data']){
+            return false;
+        }
+        $newstr=$addstr.$data_arr['data'];
+        $this->SaveFileBody($filename,$newstr);
+        return true;
+    }
+
     //失败记录
     public function bt_file_record($msg,$site){
         echo $msg=$msg."\n";
@@ -507,6 +549,8 @@ class ZBlog{
 
     public $zc_blog_subname='';//副标题
     public $zc_blog_copyright='';//版权说明
+    
+    public $csrftoken;//登录时获取 全站csrf是统一的
 
     public function __construct() {
         // $this->upzb();
@@ -526,7 +570,7 @@ class ZBlog{
         echo '开始下载zblog    ';
         for($i=0;$i<10;$i++){
             $this->curl_post($this->host.'install.php');
-            sleep($i+2);
+            sleep(2);
             //检查程序是否下载成功
             if(strpos($this->curl_post($this->host.'index.php'),'安装程序 </title>')){
                 echo "zblog下载成功\n";
@@ -591,6 +635,13 @@ class ZBlog{
             }
             echo '网络不好    ';
         }
+        
+        
+        $csrftoken=$this->get_csrftoken();
+        if(!$csrftoken){
+        	$this->file_record('登录失败,csrftoken值为空');
+        	return false;
+        }
         return true;
     }
 
@@ -626,18 +677,27 @@ class ZBlog{
         }
         return $this->cookie=$cookie;
     }
-
-    //设置1
-    public function setting(){
-        $response=$this->curl_get($this->host.'zb_system/admin/index.php?act=SettingMng',$this->cookie);
-        $csrftoken=substr($response, strpos($response,'<meta name="csrfToken" content="')+32, 32);
-        if(empty($csrftoken)){
-            $this->file_record('修改标题失败,token值为空');
-            return $this;
+    
+    //获取csrftoken
+    public function get_csrftoken(){
+        $url=$this->host.'zb_system/admin/index.php?act=admin';
+        for($i=0;$i<10;$i++){
+             $response=$this->curl_get($url,$this->cookie);
+             $csrftoken=substr($response, strpos($response,'<meta name="csrfToken" content="')+32, 32);
+             if($csrftoken && preg_match('/[0-9a-zA-Z]{32}/',$csrftoken)){
+                 break;
+             }
+             if($i==9){
+                 $csrftoken='';
+             }
+             echo "网络不好    ";
         }
-        echo '获取token成功    ';
-
-        $p_url=$this->host.'zb_system/cmd.php?act=SettingSav&csrfToken='.$csrftoken;
+        return $this->csrftoken=$csrftoken;
+    }
+    
+    //网站设置
+    public function setting(){
+        $p_url=$this->host.'zb_system/cmd.php?act=SettingSav&csrfToken='.$this->csrftoken;
         $p_data=[
           'ZC_BLOG_HOST'         =>  $this->host,
           'ZC_BLOG_NAME'         =>  $this->zc_blog_name,
@@ -673,13 +733,12 @@ class ZBlog{
           'ZC_API_THROTTLE_MAX_REQS_PER_MIN'   =>  60,
         ];
         for($i=0;$i<10;$i++){
-            $response=$this->curl_post($p_url,$p_data,$this->cookie);
-            if(strpos($response,$this->zc_blog_name)!==false){
-                echo "修改标题成功\n";
+            if(strpos($this->curl_post($p_url,$p_data,$this->cookie),$this->zc_blog_name)!==false){
+                echo "网站设置成功\n";
                 break;
             }
             if($i==9){
-                $this->file_record('修改标题失败');
+                $this->file_record('网站设置失败');
             }
             echo '网络不好    ';
         }
@@ -703,13 +762,7 @@ class ZBlog{
 
     //设置分类2 返回值true
     public function set_category($name){
-        $response=$this->curl_get($this->host.'zb_system/admin/category_edit.php?act=CategoryEdt',$this->cookie);
-        $csrftoken=substr($response, strpos($response,'<meta name="csrfToken" content="')+32,32);
-        if(empty($csrftoken)){
-            $this->file_record('设置分类失败,token值为空');
-            return $this;
-        }
-        $p_url=$this->host.'zb_system/cmd.php?act=CategoryPst&csrfToken='.$csrftoken;
+        $p_url=$this->host.'zb_system/cmd.php?act=CategoryPst&csrfToken='.$this->csrftoken;
         $p_data=[
             'ID'            =>  '0',
             'Type'          =>  '0',
@@ -729,14 +782,7 @@ class ZBlog{
 
     //删除留言本
     public function del_page(){
-        $response=$this->curl_get($this->host.'zb_system/admin/index.php?act=PageMng',$this->cookie);
-        $csrftoken=substr($response, strpos($response,'<meta name="csrfToken" content="')+32, 32);
-        if(empty($csrftoken)){
-            $this->file_record('删除留言本失败,token值为空');
-            return $this;
-        }
-        echo '获取token成功    ';
-        $p_url=$this->host.'zb_system/cmd.php?act=PageDel&id=2&csrfToken='.$csrftoken;
+        $p_url=$this->host.'zb_system/cmd.php?act=PageDel&id=2&csrfToken='.$this->csrftoken;
         $p_data=array();
         $response=$this->curl_post($p_url,$p_data,$this->cookie);
         if(strpos($response,'留言本')===false){
@@ -749,14 +795,7 @@ class ZBlog{
 
     //启用插件 bool
     public function plugin_enb($plugin_id,$plugin_name){
-        $response=$this->curl_get($this->host.'zb_system/admin/index.php?act=PluginMng',$this->cookie);
-        $csrftoken=substr($response, strpos($response,'<meta name="csrfToken" content="')+32, 32);
-        if(empty($csrftoken) || !preg_match('/[0-9a-zA-Z]{32}/',$csrftoken)){
-            $this->file_record("启用{$plugin_name}插件失败,token值为空");
-            return false;
-        }
-        echo '获取token成功    ';
-        $p_url=$this->host.'zb_system/cmd.php?act=PluginEnb&name='.$plugin_id.'&csrfToken='.$csrftoken;
+        $p_url=$this->host.'zb_system/cmd.php?act=PluginEnb&name='.$plugin_id.'&csrfToken='.$this->csrftoken;
         $response=$this->curl_get($p_url,$this->cookie);
         if(strpos($response,'title="停用" class="btn-icon btn-disable" data-pluginid="'.$plugin_id.'">')){
             echo "启用{$plugin_name}插件成功\n";
@@ -770,15 +809,6 @@ class ZBlog{
     //编辑插件bool
     public function plugin_edit($plugin_id,$plugin_name,$p_data,$condition=''){
         $p_url=sprintf('%szb_users/plugin/%s/main.php',$this->host,$plugin_id);
-        $response=$this->curl_get($p_url,$this->cookie);
-        $csrftoken=substr($response, strpos($response,'<meta name="csrfToken" content="')+32, 32);
-        if(empty($csrftoken) || !preg_match('/[0-9a-zA-Z]{32}/',$csrftoken)){
-            $this->file_record("设置{$plugin_name}插件失败,token值为空");
-            return false;
-        }
-        echo '获取token成功    ';
-        
-        $p_data['csrfToken']=$csrftoken;
         $this->curl_post($p_url,$p_data,$this->cookie);
         if($condition && strpos($this->curl_get($p_url,$this->cookie),$condition)===false){
             $this->file_record("设置{$plugin_name}插件失败");
@@ -792,16 +822,15 @@ class ZBlog{
     public function plugin_rew(){
         $id='STACentre';
         $name='静态化页面';
-        // if($this->plugin_enb($id,$name)){
-        //     $this->plugin_rew_edit();
-        // }
-        for($i=0;$i<4;$i++){
+        for($i=0;$i<10;$i++){
             if($this->plugin_enb($id,$name)){
                 break;
             }
-            if($i==3){
+            if($i==9){
                 return $this;
             }
+            echo "网络不好\n";
+            sleep(1);
         }
         $this->plugin_rew_edit();
         return $this;
@@ -812,6 +841,7 @@ class ZBlog{
         $id='STACentre';
         $name='静态化页面';
         $data=[
+            'csrfToken'              =>  $this->csrftoken,
             'reset'                  =>  '',
             'ZC_STATIC_MODE'         =>  'REWRITE',
             'ZC_ARTICLE_REGEX'       =>  '{%host%}post/{%id%}.html',
@@ -839,13 +869,15 @@ class ZBlog{
         $id='iddahe_com_sitemap';
         $name='地图';
         
-        for($i=0;$i<4;$i++){
+        for($i=0;$i<10;$i++){
             if($this->plugin_enb($id,$name)){
                 break;
             }
-            if($i==3){
+            if($i==9){
                 return $this;
             }
+            echo "网络不好\n";
+            sleep(1);
         }
         
         $this->plugin_map_edit();
@@ -857,6 +889,7 @@ class ZBlog{
         $id='iddahe_com_sitemap';
         $name='地图';
         $data=[
+            'csrfToken'               =>  $this->csrftoken,
             'post_url_status'         =>  '1',
             'post_url_level'          =>  '1.0',
             'post_url_frequency'      =>  'daily',
@@ -898,16 +931,175 @@ class ZBlog{
         // }
     }
 
+
+
+    //主题设置(默认主题tpure)
+    public function tpure_edit(){
+        $p_url=$this->host.'zb_users/theme/tpure/main.php?act=base';
+        $p_data=[
+            'csrfToken'                  =>  $this->csrftoken,
+            'PostLOGO'                   =>  $this->host.'zb_users/theme/tpure/style/images/logo.png',
+            'PostLOGOON'                 =>  '0',
+            'PostLOGOHOVERON'            =>  '1',
+            'PostFAVICON'                =>  $this->host.'zb_users/theme/tpure/style/images/favicon.ico',
+            'PostFAVICONON'              =>  '0',
+            'PostTHUMB'                  =>  $this->host.'zb_users/theme/tpure/style/images/thumb.png',
+            'PostTHUMBON'                =>  '0',
+            'PostIMGON'                  =>  '1',
+            'PostBANNER'                 =>  $this->host.'zb_users/theme/tpure/style/images/banner.jpg',
+            'PostBANNERDISPLAYON'        =>  '1',
+            'PostSEARCHON'               =>  '0',//导航搜索开关
+            'PostSCHTXT'                 =>  '搜索...',
+            'PostVIEWALLON'              =>  '1',
+            'PostVIEWALLHEIGHT'          =>  '1000',
+            'PostVIEWALLSTYLE'           =>  '1',
+            'post_list_info[user]'       =>  '1',
+            'post_list_info[date]'       =>  '1',
+            'post_list_info[cate]'       =>  '0',
+            'post_list_info[view]'       =>  '1',
+            'post_list_info[cmt]'        =>  '0',
+            'post_article_info[user]'    =>  '1',
+            'post_article_info[date]'    =>  '1',
+            'post_article_info[cate]'    =>  '1',
+            'post_article_info[view]'    =>  '1',
+            'post_article_info[cmt]'     =>  '0',
+            'post_page_info[user]'       =>  '1',
+            'post_page_info[date]'       =>  '1',
+            'post_page_info[view]'       =>  '0',
+            'post_page_info[cmt]'        =>  '0',
+            'PostSINGLEKEY'              =>  '1',
+            'PostPAGEKEY'                =>  '1',
+            'PostRELATEON'               =>  '1',
+            'PostRELATENUM'              =>  '6',
+            'PostINTRONUM'               =>  '100',
+            'PostFILTERCATEGORY'         =>  '0',
+            'PostFILTERCATEGORY'         =>  '',
+            'PostSHARE'                  =>  '',
+            'PostMOREBTNON'              =>  '1',
+            'PostARTICLECMTON'           =>  '1',
+            'PostPAGECMTON'              =>  '1',
+            'PostFIXMENUON'              =>  '1',
+            'PostBLANKON'                =>  '0',
+            'PostGREYON'                 =>  '0',
+            'PostREMOVEPON'              =>  '1',
+            'PostTIMEAGOON'              =>  '1',
+            'PostBACKTOTOPON'            =>  '1',
+            'PostSAVECONFIG'             =>  '1',
+        ];
+        $response=$this->curl_post($p_url,$p_data,$this->cookie);
+        if(strpos($response,'<p class="hint hint_good" data-delay="10000">操作成功</p>')===false){
+            $this->file_record('主题基本设置失败');
+        }
+        
+        
+        $p_url=$this->host.'zb_users/theme/tpure/main.php?act=seo';
+        $p_data=[
+            'csrfToken'       =>  $this->csrftoken,
+            'SEOON'           =>  '1',
+            'SEOTITLE'        =>  $this->zc_blog_name,//网站标题
+            'SEOKEYWORDS'     =>  $this->zc_blog_keywords,
+            'SEODESCRIPTION'  =>  $this->zc_blog_description,
+        ];
+        for($i=0;$i<10;$i++){
+            $response=$this->curl_post($p_url,$p_data,$this->cookie);
+            if(strpos($response,'<p class="hint hint_good" data-delay="10000">操作成功</p>')!==false){
+                break;
+            }
+            if($i=9){
+                $this->file_record('主题SEO设置失败');
+                return $this;
+            }
+        }
+        echo "主题SEO设置成功\n";
+        return $this;
+    }
+
+    //添加友情链接;href,title,text,target,sub,ico
+    public function addlink($arr){
+        
+        $p_url=$this->host.'zb_users/plugin/LinksManage/main.php?edit=link';
+        $response=$this->curl_get($p_url,$this->cookie);
+        preg_match('/<input name="ID" type="hidden" value="(.*?)" \/>/',$response,$mat_id);
+        // preg_match('/<input name="Source" type="hidden" value="(.*?)" \/>/',$response,$mat_source);
+        if(!isset($mat_id[1])){
+            $mat_id[1]=10;
+        }
+        
+        $p_url=$this->host.'zb_users/plugin/LinksManage/main.php?act=save&csrfToken='.$this->csrftoken;
+        $p_data['ID']=$mat_id[1];
+        $p_data['Source']='system';//$mat_source[2];
+        $p_data['Name']='友情链接';
+        $p_data['FileName']='link';
+        $p_data['HtmlID']='divLinkage';
+        $p_data['IsHideTitle']='';
+        $p_data['tree']='1';
+        $p_data['stay']='1';
+        
+        array_push($arr['href'],'http://');
+        array_push($arr['title'],'链接描述');
+        array_push($arr['text'],'链接文本');
+        array_push($arr['target'],'');
+        array_push($arr['sub'],'');
+        array_push($arr['ico'],'');
+        $p_data['href']=$arr['href'];
+        $p_data['title']=$arr['title'];
+        $p_data['text']=$arr['text'];
+        $p_data['target']=$arr['target'];
+        $p_data['sub']=$arr['sub'];
+        $p_data['ico']=$arr['ico'];
+        $response=$this->curl_post($p_url,$p_data,$this->cookie);
+        if(strpos($response,'<p class="hint hint_good" data-delay="10000">操作成功</p>')!==false){
+            echo "添加友情链接成功\n";
+        }else{
+            $this->file_record('添加友情链接成功');
+        }
+        return $this;
+    }
+
+    //组装友情链接
+    public function get_rand_link($arr,$num=6){
+        // $char='****';
+        $num=intval($num);
+        $coun=count($arr);
+        if($num>$coun){
+            $num=$coun;
+        }
+        if($num<2){
+            $num=1;
+        }
+        
+        $arr_key=array_rand($arr,$num);
+        if(gettype($arr_key)=='integer'){
+            $arr_key=array($arr_key);
+        }
+        $rr=array();
+        foreach ($arr_key as $key){
+            $rr[]=$arr[$key];
+        }
+        $res=array();
+        foreach ($rr as $val){
+            $ss=explode('****',$val);
+            $res['href'][]='http://'.$ss[0];
+            $res['title'][]=$ss[1];//友情链接title
+            $res['text'][]=$ss[1];//友情链接文本
+            $res['target'][]='1';
+            $res['sub'][]='';
+            $res['ico'][]='';
+        }
+        
+        return $res;
+    }
+
     //下载,启用主题 bool
     public function down_theme(){
         $id=$this->get_theme_id();//随机主题id
-        //获取token;$mat[1]
+        //获取token
         $p_url=$this->host.'zb_users/plugin/AppCentre/main.php?id='.$id;
         $response=$this->curl_get($p_url,$this->cookie);
-        preg_match('/app\.article_id \+ "&token=(.*?)"/',$response,$mat);
+        preg_match('/app\.article_id \+ "&token=(.*?)"/',$response,$mat_token);
         //下载一个主题
         echo '开始下载主题     ';
-        $p_url=sprintf('%szb_users/plugin/AppCentre/main.php?method=down&id=%s&token=%s', $this->host, $id, $mat[1]);
+        $p_url=sprintf('%szb_users/plugin/AppCentre/main.php?method=down&id=%s&token=%s', $this->host, $id, $mat_token[1]);
         $response=$this->curl_get($p_url,$this->cookie,40);
         if($response=='alert("0:App下载失败！")'){
             $this->file_record("主题下载失败:{$id}");
@@ -917,10 +1109,10 @@ class ZBlog{
     }
 
     //启用主题
-    public function enb_theme($csrftoken,$themeid,$themestyle){
+    public function enb_theme($themeid,$themestyle){
         $p_url=$this->host.'zb_system/cmd.php?act=ThemeSet';
         $p_data=[
-            'csrfToken' =>  $csrftoken,
+            'csrfToken' =>  $this->csrftoken,
             'theme'     =>  $themeid,
             'style'     =>  $themestyle,
         ];
@@ -934,34 +1126,28 @@ class ZBlog{
         }
     }
 
-
     //下载,启用主题 bool
     public function set_theme(){
         
         //获取主题信息
         $response=$this->curl_get($this->host.'zb_system/admin/index.php?act=ThemeMng',$this->cookie);
-        $csrftoken=substr($response, strpos($response,'<meta name="csrfToken" content="')+32, 32);
-        if(empty($csrftoken) || !preg_match('/[0-9a-zA-Z]{32}/',$csrftoken)){
-            $this->file_record("启用主题失败,token值为空");
-            return $this;
-        }
-        preg_match_all('/data-themeid="(.*?)"/',$response,$mat1);//匹配主题名称
-        preg_match_all('/<select class="edit" size="1" title="样式"><option value="(.*?)"/',$response,$mat2);//匹配主题样式
+        preg_match_all('/data-themeid="(.*?)"/',$response,$mat_id);//匹配主题名称
+        preg_match_all('/<select class="edit" size="1" title="样式"><option value="(.*?)"/',$response,$mat_style);//匹配主题样式
         
-        ////var_dump($mat1);var_dump($mat2);exit;
+        ////var_dump($mat_id);var_dump($mat_style);exit;
         //判断主题是否下载成功
-        if(!isset($mat1[1][1]) || !$mat1[1][1]){
+        if(!isset($mat_id[1][1]) || !$mat_id[1][1]){
             $this->file_record("主题下载失败:{$id}");
             return false;
         }
         //启用主题
-        if($this->enb_theme($csrftoken,$mat1[1][1],$mat2[1][1])){
+        if($this->enb_theme($mat_id[1][1],$mat_style[1][1])){
             echo "启用下载主题成功\n";
             return true;
         }else{
             echo "启用下载主题失败    ";
             //启用下载主题失败,启用默认主题
-            if($this->enb_theme($csrftoken,'tpure','style')){
+            if($this->enb_theme('tpure','style')){
                 echo "启用默认主题成功2\n";
                 return true;
             }else{
@@ -971,10 +1157,6 @@ class ZBlog{
         }
     }
 
-    //主题seo
-    public function set_theme_seo($name){
-        var_dump($name);
-    }
 
     //随机主题id 返回值id
     public function get_theme_id(){
@@ -1103,16 +1285,17 @@ class ZBlog{
         $arr=explode($char,$tdk);
         $this->site=strtolower($arr[0]);
         $this->host=sprintf('http://%s/',$this->site);
-        $title=(isset($arr[1]) && $arr[1])?$arr[1]:'我的博客';
-        $this->zc_blog_keywords=(isset($arr[2]) && $arr[2])?$arr[2]:'网站关键词';
-        $this->zc_blog_description=(isset($arr[3]) && $arr[3])?$arr[3]:'网站描述';
+        $this->zc_blog_name=(isset($arr[1]) && $arr[1])?$arr[1]:'我的博客';
+        $this->zc_blog_subname=(isset($arr[2]) && $arr[2])?$arr[2]:'';
+        $this->zc_blog_keywords=(isset($arr[3]) && $arr[3])?$arr[3]:'';
+        $this->zc_blog_description=(isset($arr[4]) && $arr[4])?$arr[4]:'';
+        $this->zc_blog_copyright=(isset($arr[5]) && $arr[5])?$arr[5]:'';
         
         // if(preg_match('/(.*?)[-—\|_,，]/',$title,$mat)){
         //     $this->zc_blog_name=$mat[1];
         //     $this->zc_blog_subname=str_replace($mat[0],'',$title);//网站副标题
         // }
         
-        $this->zc_blog_name=$title;//网站标题
         return $this;
     }
 

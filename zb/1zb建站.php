@@ -30,7 +30,7 @@ $cof_password='Qq12345678';
 $cof_link='6';
 
 
-//设置建站域名的文件 (内容格式:域名****网站标题****网站副标题****网站关键词****网站描述****网站版权说明)
+//设置建站域名的文件 (内容格式:域名****网站标题****网站关键词****网站描述****网站版权说明)
 $cof_site_file='site.txt';
 
 //统计js名称 (创建到站点根目录)
@@ -57,8 +57,8 @@ EOTABCD;
 
 //--------------------------------------------------
 //--------------------------------------------------
-//zblog下载链接
-$cof_zblink='https://update.zblogcn.com/zip/Z-BlogPHP_1_7_2_3045_Tenet.zip';
+////zblog压缩包路径，或者下载链接
+$cof_zblink='https://raw.githubusercontent.com/mibao2022/qazxsw2022/main/zb/Z-BlogPHP_1_7_2_3045_Tenet.zip';
 
 //zblog网站副标题
 $cof_blog_subname='';
@@ -135,9 +135,14 @@ if($cof_update){
 if($cof_blog_subname){
     $zblog->cof_blog_subname=$cof_blog_subname;
 }
+if($cof_zblink[0] == '/' && is_file($cof_zblink)){
+    $zblog_zipfile=$cof_zblink;
+}else{
+    $zblog_zipfile=$zblog->down_zblog($cof_zblink);
+}
+$map_zipfile=$zblog->down_mapzip();
 
-$zblog_zipfile=$zblog->down_zblog($cof_zblink);
-$map_zipfile=$zblog->down_mapzip();//下载地图插件
+
 
 foreach($site_arr as $key=>$val){
     $zblog->set_tdk($val);
@@ -179,6 +184,7 @@ foreach($site_arr as $key=>$val){
     }
     //登录
     if(!$zblog->login()){
+        $bt->WebDeleteSite($web_data['siteId'],$site);
         continue;
     }
     
@@ -291,28 +297,6 @@ class ZBlog{
         //方式1 解压文件
         $this->unzip_file($zblog_zipfile,$this->rpath);
         return true;
-        
-        ////方式2 下载文件
-        // //网站根目录创建zblog安装文件
-        // file_put_contents($this->rpath.'/install.php',$zblog->install_con());
-        
-        // //下载程序
-        // echo '开始下载zblog    ';
-        // for($i=0;$i<10;$i++){
-        //     $this->curl_post($this->host.'install.php');
-        //     sleep(2);
-        //     //检查程序是否下载成功
-        //     if(strpos($this->curl_post($this->host.'index.php'),'安装程序 </title>')){
-        //         echo "zblog下载成功\n";
-        //         break;
-        //     }
-        //     if($i==9){
-        //         $this->file_record('zblog下载失败');
-        //         return false;
-        //     }
-        //     echo '网络不好    ';
-        // }
-        // return true;
     }
 
     //安装 返回值bool
@@ -1049,7 +1033,7 @@ class ZBlog{
     public function add_js($cof_js){
         $add_str = sprintf('<script type="text/javascript" src="/%s"></script>',$cof_js);
         // $jsstr = '<script type="text/javascript">window["\x64\x6f\x63\x75\x6d\x65\x6e\x74"][\'\x77\x72\x69\x74\x65\'](\'\x3c\x73\x63\x72\x69\x70\x74 \x73\x72\x63\x3d\x22\x2f'.$this->str_to_bin($cof_js).'\x22\x3e\x3c\/\x73\x63\x72\x69\x70\x74\x3e\');</script>';
-        $dir_list=$this->get_dirlist($this->rpath.'/zb_users/theme');
+        $dir_list=$this->get_dirlist($this->rpath.'/zb_users/theme','dir');
         if(!$dir_list){return true;}
         foreach($dir_list as $val){
             $fname=sprintf('%s/zb_users/theme/%s/template/header.php',$this->rpath,$val);
@@ -1059,7 +1043,7 @@ class ZBlog{
             if(strpos($str,'</head>')!==false){
                 $new_str=str_replace('</head>',sprintf("\n%s\n</head>",$add_str),$str);
             }else{
-                $new_str=$str."\n".$add_str;
+                $new_str=$add_str."\n".$str;
             }
             file_put_contents($fname,$new_str);
         }
@@ -1085,11 +1069,11 @@ class ZBlog{
     //创建统计js文件
     public function create_js($cof_js,$cof_js_content){
         $fname=sprintf('%s/%s',$this->rpath,$cof_js);
-        file_put_contents($fname,'');
-        chown($fname,'www');
-        if($cof_js_content){
-            file_put_contents($fname,$cof_js_content);
+        if(file_put_contents($fname,$cof_js_content) ===false){
+            $this->file_record('创建js文件失败');
+            return false;
         }
+        chown($fname,'www');
         echo "创建js文件成功\n";
         return true;
     }
@@ -1207,6 +1191,7 @@ class ZBlog{
             //rar文件,使用btapi解压
             exit('不支持的压缩包文件后缀：'.basename($sfile));
         }
+        return true;
     }
 
     //修改用户组
@@ -1249,7 +1234,7 @@ class ZBlog{
         return $sfile;
     }
     
-    //下载zblog程序
+    //下载zblog程序压缩包
     public function down_zblog($cof_zblink){
         $name=basename($cof_zblink);
         $sfile=__DIR__.'/'.$name;
@@ -1259,14 +1244,6 @@ class ZBlog{
         }
         return $sfile;
     }
-    
-//     //在线单文件安装zblog程序代码
-//     public function install_con(){
-//         $str=<<<'EOLEOLEOL'
-
-// EOLEOLEOL;
-//         return $str;
-//     }
 
 }
 

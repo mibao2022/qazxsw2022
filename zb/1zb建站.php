@@ -14,7 +14,7 @@ php /www/1111/1zb建站.php
 $cof_panel='http://202.165.121.194:8888/';
 
 //宝塔API接口密钥  添加IP白名单到API接口
-$cof_key='8X3F16vHtdiHqQYepsoBbp1vkg2VxGfS';
+$cof_key='VIAZyCfERh1ii1RkAe3zmZmjmWL4A4Qc';
 
 //php版本(例7.2版本 写72)(推荐php7.2以上版本)
 $cof_php_v=72;
@@ -83,6 +83,15 @@ $cof_update='0';
 //--------------------------------------------
 $cof_panel=rtrim($cof_panel,'/');
 $cof_key=trim($cof_key);
+if(!preg_match('/[0-9a-zA-Z]{32}/',$cof_key)){
+    exit('设置正确的宝塔API接口密钥');
+}
+
+set_time_limit(0);
+$bt=new BtApi($cof_panel,$cof_key);
+$zblog=new ZBlog();
+if($cof_update){$zblog->upzb();}
+
 $cof_php_v=intval($cof_php_v);
 $cof_username=trim($cof_username);
 $cof_password=trim($cof_password);
@@ -91,16 +100,11 @@ $cof_js=trim($cof_js);
 $cof_js_content=trim($cof_js_content);
 $cof_blog_subname=trim($cof_blog_subname);
 $cof_link=intval(trim($cof_link));
-
-
 if($cof_site_file[0] != '/'){
     $cof_site_file=__DIR__.'/'.$cof_site_file;
 }
 if(!is_readable($cof_site_file)){
     exit('设置建站域名的文件');
-}
-if(!preg_match('/[0-9a-zA-Z]{32}/',$cof_key)){
-    exit('设置正确的宝塔API接口密钥');
 }
 if(!$cof_php_v || $cof_php_v<54){
     exit('填写正确的php版本');
@@ -117,6 +121,10 @@ if(!$cof_js){
 if(!is_dir('/www/server')){
     exit('文件需要放到服务器上运行');
 }
+if(!$cof_zblink){
+    exit('设置zblog压缩包路径');
+}
+
 //读取域名
 $site_str=file_get_contents($cof_site_file);
 $site_arr=explode("\n", trim($site_str));
@@ -126,12 +134,7 @@ if(empty($site_arr)){
 }
 
 
-set_time_limit(0);
-$bt=new BtApi($cof_panel,$cof_key);
-$zblog=new ZBlog();
-if($cof_update){
-    $zblog->upzb();
-}
+
 if($cof_blog_subname){
     $zblog->cof_blog_subname=$cof_blog_subname;
 }

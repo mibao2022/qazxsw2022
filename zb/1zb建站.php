@@ -133,8 +133,6 @@ if(empty($site_arr)){
 	exit('设置建站域名');
 }
 
-
-
 if($cof_blog_subname){
     $zblog->cof_blog_subname=$cof_blog_subname;
 }
@@ -144,6 +142,11 @@ if($cof_zblink[0] == '/' && is_file($cof_zblink)){
     $zblog_zipfile=$zblog->down_zblog($cof_zblink);
 }
 $map_zipfile=$zblog->down_mapzip();
+$bt->SetFileAccess($zblog_zipfile);
+$bt->SetFileAccess($map_zipfile);
+$zblog_zipfile_fix= (substr($zblog_zipfile,-7)=='.tar.gz')?'tar':'zip';
+$map_zipfile_fix= (substr($map_zipfile,-7)=='.tar.gz')?'tar':'zip';
+
 
 
 
@@ -169,6 +172,12 @@ foreach($site_arr as $key=>$val){
     $web_data=json_decode($response,true);
     @unlink($rpath.'/index.html');
     
+    
+    //解压程序 (改btapi解压)
+    $bt->UnZip($zblog_zipfile,$rpath,$zblog_zipfile_fix);
+    sleep(1);
+    
+    
     //设置网站伪静态
     $response=$bt->SaveFileBody(sprintf('/www/server/panel/vhost/rewrite/%s.conf',$site), $cof_rewrite);
     if(strpos($response,'文件已保存')!==false){
@@ -177,8 +186,6 @@ foreach($site_arr as $key=>$val){
         $zblog->file_record('伪静态设置失败');
     }
     
-    //解压文件
-    $zblog->down($zblog_zipfile);
     
     //安装
     if(!$zblog->install()){
@@ -201,11 +208,15 @@ foreach($site_arr as $key=>$val){
     $zblog->add_js($cof_js);
     $zblog->create_js($cof_js,$cof_js_content);
     
+    //解压地图插件 (改btapi解压)
+    $bt->UnZip($map_zipfile,$rpath.'/zb_users/plugin',$map_zipfile_fix);
+    
     //网站设置
     $zblog->setting();
     
     //清空缓存并重新编译模板
     $zblog->clearcacahe();
+    $bt->SetFileAccess($rpath.'/'.$cof_js);
     
 }
 
@@ -257,9 +268,6 @@ class ZBlog{
         //网站设置
         $this->setting_mng();
         
-        //解压地图插件
-        $this->unzip_file($map_zipfile,$this->rpath.'/zb_users/plugin');
-        // $this->recurse_chown_chgrp($this->rpath.'/zb_users/plugin');
         
         //添加分类
         $this->add_category();
@@ -293,13 +301,6 @@ class ZBlog{
         //seo插件管理
         
         
-    }
-
-    //下载 返回值bool
-    public function down($zblog_zipfile){
-        //方式1 解压文件
-        $this->unzip_file($zblog_zipfile,$this->rpath);
-        return true;
     }
 
     //安装 返回值bool
@@ -1076,7 +1077,7 @@ class ZBlog{
             $this->file_record('创建js文件失败');
             return false;
         }
-        chown($fname,'www');
+        // chown($fname,'www');
         echo "创建js文件成功\n";
         return true;
     }
@@ -1174,43 +1175,42 @@ class ZBlog{
         return false;
     }
 
-    /* php解压文件
-    *$sfile 压缩包文件
-    *$dpath 解压后路径
-    */
-    public function unzip_file($sfile,$dpath){
-        
-        if(substr($sfile,-7)=='.tar.gz'){
-            $phar = new PharData($sfile);
-            $phar->extractTo($dpath, null, true);
-            // $this->recurse_chown_chgrp($dpath);//修改用户组
-        }elseif(substr($sfile,-4)=='.zip'){
-            $zip = new ZipArchive();
-            $zip->open($sfile);
-            $zip->extractTo($dpath);
-            $zip->close();
-            // $this->recurse_chown_chgrp($dpath);//修改用户组
-        }else{
-            //rar文件,使用btapi解压
-            exit('不支持的压缩包文件后缀：'.basename($sfile));
-        }
-        return true;
-    }
-
-    //修改用户组
-    function recurse_chown_chgrp($mypath, $uid='www', $gid='www'){
-        $d = opendir ($mypath) ;
-        while(($file = readdir($d)) !== false) {
-            if ($file != "." && $file != ".." && $file != ".user.ini") {
-                $typepath = $mypath . "/" . $file ;
-                if (filetype ($typepath) == 'dir') {
-                    $this->recurse_chown_chgrp ($typepath, $uid, $gid);
-                }
-                chown($typepath, $uid);
-                chgrp($typepath, $gid);
-            }
-        }
-    }
+    // /* php解压文件
+    // *$sfile 压缩包文件
+    // *$dpath 解压后路径
+    // */
+    // public function unzip_file($sfile,$dpath){
+    //     //使用宝塔api解压，得到www权限文件
+    //     if(substr($sfile,-7)=='.tar.gz'){
+    //         $phar = new PharData($sfile);
+    //         $phar->extractTo($dpath, null, true);
+    //         // $this->recurse_chown_chgrp($dpath);//修改用户组
+    //     }elseif(substr($sfile,-4)=='.zip'){
+    //         $zip = new ZipArchive();
+    //         $zip->open($sfile);
+    //         $zip->extractTo($dpath);
+    //         $zip->close();
+    //         // $this->recurse_chown_chgrp($dpath);//修改用户组
+    //     }else{
+    //         //rar文件,使用btapi解压
+    //         exit('不支持的压缩包文件后缀：'.basename($sfile));
+    //     }
+    //     return true;
+    // }
+    // //修改用户组
+    // function recurse_chown_chgrp($mypath, $uid='www', $gid='www'){
+    //     $d = opendir ($mypath) ;
+    //     while(($file = readdir($d)) !== false) {
+    //         if ($file != "." && $file != ".." && $file != ".user.ini") {
+    //             $typepath = $mypath . "/" . $file ;
+    //             if (filetype ($typepath) == 'dir') {
+    //                 $this->recurse_chown_chgrp ($typepath, $uid, $gid);
+    //             }
+    //             chown($typepath, $uid);
+    //             chgrp($typepath, $gid);
+    //         }
+    //     }
+    // }
 
     //下载文件
     public function down_file($d_link,$sfile){
@@ -1221,7 +1221,7 @@ class ZBlog{
         $fh = fopen($sfile, 'w');
         fwrite($fh, $output);
         fclose($fh);
-        chown($sfile,'www');
+        // chown($sfile,'www');
         return true;
     }
 
@@ -1334,6 +1334,17 @@ class BtApi{
         $p_data['dfile']=$dfile;
         $p_data['type']=$type;//tar,zip,rar
         $p_data['coding']=$coding;
+        return $this->HttpPostCookie($url,$p_data);
+    }
+
+    //修改权限
+    public function SetFileAccess($filename,$user='www',$access='755',$all='False'){
+        $url=$this->bt_panel.'/files?action=SetFileAccess';
+        $p_data=$this->GetKeyData();
+        $p_data['filename']=$filename;
+        $p_data['user']=$user;
+        $p_data['access']=$access;
+        $p_data['all']=$all;//应用到子目录 True,False
         return $this->HttpPostCookie($url,$p_data);
     }
 

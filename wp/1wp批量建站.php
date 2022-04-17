@@ -140,6 +140,11 @@ if($cof_wplink[0] == '/' && is_file($cof_wplink)){
     $wp_zipfile=$wp->down_wp($cof_wplink);
 }
 $seo_zipfile=$wp->down_seozip();
+$bt->SetFileAccess($wp_zipfile);
+$bt->SetFileAccess($seo_zipfile);
+$wp_zipfile_fix= (substr($wp_zipfile,-7)=='.tar.gz')?'tar':'zip';
+$seo_zipfile_fix= (substr($seo_zipfile,-7)=='.tar.gz')?'tar':'zip';
+
 
 
 
@@ -159,8 +164,6 @@ foreach($site_arr as $key=>$val){
     ]);
     
     
-    
-    
     //创建站点
     echo sprintf("\n------搭建第%s个站点:%s------\n",$key+1,$site);
     $response=$bt->AddSite($site,$rpath,$cof_php_v,'MySQL',$db_name,$db_pwd);
@@ -178,6 +181,10 @@ foreach($site_arr as $key=>$val){
 	}
     @unlink($rpath.'/index.html');
     
+    //解压程序 (改btapi解压)
+    $bt->UnZip($wp_zipfile,$rpath,$wp_zipfile_fix);
+    sleep(1);
+    
     //设置网站伪静态
     $response=$bt->SaveFileBody(sprintf('/www/server/panel/vhost/rewrite/%s.conf',$site), $cof_rewrite);
     if(strpos($response,'文件已保存')===false){
@@ -185,9 +192,6 @@ foreach($site_arr as $key=>$val){
     }else{
         echo "伪静态设置成功\n";
     }
-    
-    //解压
-    $wp->unzip_wp($wp_zipfile);
     
     //安装wp
     if(!$wp->install()){
@@ -200,17 +204,16 @@ foreach($site_arr as $key=>$val){
         continue;
     }
     
-    
-    //网站设置
-    $wp->setting();
-    
-    
-    
     //添加js代码
     $wp->add_js($cof_js);
     $wp->create_js($cof_js,$cof_js_content);
+    $bt->SetFileAccess($rpath.'/'.$cof_js);
     
+    //解压seo插件 (改btapi解压)
+    $bt->UnZip($seo_zipfile,$rpath.'/wp-content/plugins',$seo_zipfile_fix);
     
+    //网站设置
+    $wp->setting();
     
 }
 
@@ -278,8 +281,6 @@ class WordPress{
         $this->category_add();
         
         
-        //解压seo插件
-        $this->plugin_seo_unzip($seo_zipfile);
         
         //下载随机主题
         $theme=$this->theme_down();
@@ -624,11 +625,6 @@ class WordPress{
         return true;
     }
 
-    //解压seo插件
-    public function plugin_seo_unzip($fname){
-        $this->unzip_file($fname,$this->rpath.'/wp-content/plugins');
-        return true;
-    }
 
     //启用seo插件
     public function plugin_seo_enb(){
@@ -1279,48 +1275,41 @@ class WordPress{
     }
 
 
-    //解压wp
-    public function unzip_wp($fname){
-        $this->unzip_file($fname,$this->rpath);
-        return true;
-    }
-
-    /* php解压文件
-    *$sfile 压缩包文件
-    *$dpath 解压后路径
-    */
-    public function unzip_file($sfile,$dpath){
-        if(substr($sfile,-7)=='.tar.gz'){
-            $phar = new PharData($sfile);
-            $phar->extractTo($dpath, null, true);
-            // $this->recurse_chown_chgrp($dpath);//修改用户组
-        }elseif(substr($sfile,-4)=='.zip'){
-            $zip = new ZipArchive();
-            $zip->open($sfile);
-            $zip->extractTo($dpath);
-            $zip->close();
-            // $this->recurse_chown_chgrp($dpath);//修改用户组
-        }else{
-            //rar文件,使用btapi解压
-            exit('不支持的压缩包文件后缀：'.basename($sfile));
-        }
-        return true;
-    }
-
-    //修改用户组
-    function recurse_chown_chgrp($mypath, $uid='www', $gid='www'){
-        $d = opendir ($mypath) ;
-        while(($file = readdir($d)) !== false) {
-            if ($file != "." && $file != ".." && $file != ".user.ini") {
-                $typepath = $mypath . "/" . $file ;
-                if (filetype ($typepath) == 'dir') {
-                    $this->recurse_chown_chgrp ($typepath, $uid, $gid);
-                }
-                chown($typepath, $uid);
-                chgrp($typepath, $gid);
-            }
-        }
-    }
+    // /* php解压文件
+    // *$sfile 压缩包文件
+    // *$dpath 解压后路径
+    // */
+    // public function unzip_file($sfile,$dpath){
+    //     if(substr($sfile,-7)=='.tar.gz'){
+    //         $phar = new PharData($sfile);
+    //         $phar->extractTo($dpath, null, true);
+    //         // $this->recurse_chown_chgrp($dpath);//修改用户组
+    //     }elseif(substr($sfile,-4)=='.zip'){
+    //         $zip = new ZipArchive();
+    //         $zip->open($sfile);
+    //         $zip->extractTo($dpath);
+    //         $zip->close();
+    //         // $this->recurse_chown_chgrp($dpath);//修改用户组
+    //     }else{
+    //         //rar文件,使用btapi解压
+    //         exit('不支持的压缩包文件后缀：'.basename($sfile));
+    //     }
+    //     return true;
+    // }
+    // //修改用户组
+    // function recurse_chown_chgrp($mypath, $uid='www', $gid='www'){
+    //     $d = opendir ($mypath) ;
+    //     while(($file = readdir($d)) !== false) {
+    //         if ($file != "." && $file != ".." && $file != ".user.ini") {
+    //             $typepath = $mypath . "/" . $file ;
+    //             if (filetype ($typepath) == 'dir') {
+    //                 $this->recurse_chown_chgrp ($typepath, $uid, $gid);
+    //             }
+    //             chown($typepath, $uid);
+    //             chgrp($typepath, $gid);
+    //         }
+    //     }
+    // }
 
     //下载wp程序压缩包
     public function down_wp($cof_wplink){
@@ -1354,7 +1343,7 @@ class WordPress{
         $fh = fopen($sfile, 'w');
         fwrite($fh, $output);
         fclose($fh);
-        chown($sfile,'www');
+        // chown($sfile,'www');
         return true;
     }
 
@@ -1409,7 +1398,7 @@ class WordPress{
             $this->file_record('创建js文件失败');
             return false;
         }
-        chown($fname,'www');
+        // chown($fname,'www');
         echo "创建js文件成功\n";
         return true;
     }
@@ -1694,6 +1683,17 @@ class BtApi{
         $p_data['dfile']=$dfile;
         $p_data['type']=$type;
         $p_data['coding']=$coding;
+        return $this->HttpPostCookie($url,$p_data);
+    }
+
+    //修改权限
+    public function SetFileAccess($filename,$user='www',$access='755',$all='False'){
+        $url=$this->bt_panel.'/files?action=SetFileAccess';
+        $p_data=$this->GetKeyData();
+        $p_data['filename']=$filename;
+        $p_data['user']=$user;
+        $p_data['access']=$access;
+        $p_data['all']=$all;//应用到子目录 True,False
         return $this->HttpPostCookie($url,$p_data);
     }
 

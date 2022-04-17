@@ -1293,13 +1293,13 @@ class WordPress{
         if(substr($sfile,-7)=='.tar.gz'){
             $phar = new PharData($sfile);
             $phar->extractTo($dpath, null, true);
-            $this->recurse_chown_chgrp($dpath);//修改用户组
+            // $this->recurse_chown_chgrp($dpath);//修改用户组
         }elseif(substr($sfile,-4)=='.zip'){
             $zip = new ZipArchive();
             $zip->open($sfile);
             $zip->extractTo($dpath);
             $zip->close();
-            $this->recurse_chown_chgrp($dpath);//修改用户组
+            // $this->recurse_chown_chgrp($dpath);//修改用户组
         }else{
             //rar文件,使用btapi解压
             exit('不支持的压缩包文件后缀：'.basename($sfile));

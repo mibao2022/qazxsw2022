@@ -8,25 +8,21 @@ php /www/1111/1wp批量建站.php
 
 
 
-
-//---------------------------设置开始---------------------------------
+//-------------------------------------------------------------------
+//---------------------------设置开始--------------------------------
 
 //宝塔面板地址*
 $cof_panel='http://202.165.121.194:8888/';
-
 //宝塔API接口密钥*
-$cof_key='VIAZyCfERh1ii1RkAe3zmZmjmWL4A4Qc';
-
+$cof_key='KHiEGcA8AUlKrPnvfDMMGOmvJUHA5nvM';
 //网站使用的php版本* (例7.2版本 写72)(推荐php7.0以上版本)
 $cof_php_v=72;
 
 
 //wp网站后台账号*
 $cof_admin_name='admin1234';
-
 //wp网站后台密码*
 $cof_admin_password='Qq12345678';
-
 //wp管理邮箱
 $cof_email='123456@qq.com';
 
@@ -37,14 +33,13 @@ $cof_site_file='site.txt';
 
 //统计js名称* (创建到网站根目录)
 $cof_js='baidu.js';
-
 //统计js内容 (内容写在EOTABCD中间,EOTABCD后面不能有字符、空格) 
 $cof_js_content=<<<'EOTABCD'
 
 
 EOTABCD;
-//---------------------------设置结束---------------------------------
-
+//---------------------------设置结束--------------------------------
+//-------------------------------------------------------------------
 
 
 
@@ -73,16 +68,14 @@ $cof_update='0';
 //---------------代码开始---------------------
 //--------------------------------------------
 //--------------------------------------------
+set_time_limit(0);
+$wp=new WordPress();
+if($cof_update){$wp->upwp();exit();}
 $cof_panel=rtrim($cof_panel,'/');
 $cof_key=trim($cof_key);
 if(!preg_match('/[0-9a-zA-Z]{32}/',$cof_key)){
     exit('设置正确的宝塔API接口密钥');
 }
-
-set_time_limit(0);
-$bt=new BtApi($cof_panel,$cof_key);
-$wp=new WordPress();
-if($cof_update){$wp->upwp();}
 
 $cof_php_v=intval($cof_php_v);
 $cof_admin_name=trim($cof_admin_name);
@@ -124,9 +117,6 @@ if(!$cof_browse){
     exit('设置下载模板主题类型');
 }
 
-
-
-
 //读取域名
 $site_str=file_get_contents($cof_site_file);
 $site_arr=explode("\n", trim($site_str));
@@ -140,11 +130,11 @@ if($cof_wplink[0] == '/' && is_file($cof_wplink)){
     $wp_zipfile=$wp->down_wp($cof_wplink);
 }
 $seo_zipfile=$wp->down_seozip();
+$bt=new BtApi($cof_panel,$cof_key);
 $bt->SetFileAccess($wp_zipfile);
 $bt->SetFileAccess($seo_zipfile);
 $wp_zipfile_fix= (substr($wp_zipfile,-7)=='.tar.gz')?'tar':'zip';
 $seo_zipfile_fix= (substr($seo_zipfile,-7)=='.tar.gz')?'tar':'zip';
-
 
 
 
@@ -219,15 +209,6 @@ foreach($site_arr as $key=>$val){
 
 
 echo "\n完成\n";
-
-
-
-
-
-
-
-
-
 
 
 
@@ -630,7 +611,9 @@ class WordPress{
     public function plugin_seo_enb(){
         $reg_en='/<strong>All In One SEO Pack<\/strong><div class="row-actions visible"><span class=\'activate\'><a href="(.*?)" id="activate-all-in-one-seo-pack"/';
         $reg_zh='/<strong>多合一SEO包<\/strong><div class="row-actions visible"><span class=\'activate\'><a href="(.*?)" id="activate-all-in-one-seo-pack"/';
-        return $this->plugin_enb_func($reg_en,$reg_zh,'seo插件');
+        $res = $this->plugin_enb_func($reg_en,$reg_zh,'seo插件');
+        $this->curl_get($this->host.'wp-admin/index.php?page=aioseop-welcome',$this->cookie);//初始化
+        return $res;
     }
 
     /*
@@ -781,6 +764,8 @@ class WordPress{
         ];
         for ($i = 0; $i < 10; $i++) {
             $response = $this->curl_post($p_url,$p_data,$this->cookie);
+file_put_contents(__DIR__.'/cc.txt',$response);
+
             if(strpos($response,sprintf("value='%s'",$this->blog_name))!==false){
                 break;
             }
@@ -1138,7 +1123,7 @@ class WordPress{
     public function menu_add(){
         $menu_name = 'menu123'; //菜单名称
         
-        //获取页面内容
+        //1获取页面内容
         $p_url=$this->host.'wp-admin/nav-menus.php';
         for ($i = 0; $i < 10; $i++) {
             $response=$this->curl_get($p_url,$this->cookie);
@@ -1152,21 +1137,36 @@ class WordPress{
             }
             if($i==9){
                 // $this->file_record('创建菜单失败,获取内容失败');
-                echo "创建菜单失败,获取内容失败\n";
+                echo "创建菜单失败,1获取页面内容\n";
                 return false;
             }
+            echo '网络不好1  ';
         }
         
-        //创建菜单
-    	preg_match('/id="closedpostboxesnonce" name="closedpostboxesnonce" value="(.*?)"/',$response,$matches);
-    	$closedpostboxesnonce = $matches[1];//key
-    	preg_match('/id="meta-box-order-nonce" name="meta-box-order-nonce" value="(.*?)"/',$response,$matches);
-    	$meta_box_order_nonce = $matches[1];//key
-    	preg_match('/id="update-nav-menu-nonce" name="update-nav-menu-nonce" value="(.*?)"/',$response,$matches);
-    	$update_nav_menu_nonce = $matches[1];//key
-        if(!$closedpostboxesnonce || !$meta_box_order_nonce || !$update_nav_menu_nonce){
+        
+        //2创建菜单
+    	preg_match('/id="closedpostboxesnonce" name="closedpostboxesnonce" value="(.*?)"/',$response,$mat_closedpostboxesnonce);
+    	preg_match('/id="meta-box-order-nonce" name="meta-box-order-nonce" value="(.*?)"/',$response,$mat_meta_box_order_nonce);
+    	preg_match('/id="update-nav-menu-nonce" name="update-nav-menu-nonce" value="(.*?)"/',$response,$mat_update_nav_menu_nonce);
+        if(!isset($mat_closedpostboxesnonce[1]) || !isset($mat_meta_box_order_nonce[1]) || !isset($mat_update_nav_menu_nonce[1])){
             echo "创建菜单失败,获取key失败\n";
             return false;
+        }
+        $closedpostboxesnonce = $mat_closedpostboxesnonce[1];//下面复用
+        $meta_box_order_nonce = $mat_meta_box_order_nonce[1];//下面复用
+        $update_nav_menu_nonce = $mat_update_nav_menu_nonce[1];//下面复用
+        //获取菜单显示位置 $res_loca
+        preg_match('/<fieldset class="menu-settings-group menu-theme-locations">([\s\S]*?)<\/fieldset>/',$response,$mat_loca);
+        if(isset($mat_loca[1]) && $mat_loca[1]){
+            preg_match_all('/name="(.*?)"/',$mat_loca[1],$mat_name);
+            preg_match_all('/value="(.*?)"/',$mat_loca[1],$mat_value);
+            $cnum=count($mat_name[1]);
+            $res_loca=array();
+            for ($i = 0; $i < $cnum; $i++) {
+                $key=$mat_name[1][$i];
+                 $res_loca[$key]=$mat_value[1][$i];
+                //  $res_loca[$key]='0';
+            }
         }
         $a_url=$this->host.'wp-admin/nav-menus.php?action=edit&menu=0';
         $a_data=[
@@ -1176,41 +1176,59 @@ class WordPress{
             '_wp_http_referer'      =>  '/wp-admin/nav-menus.php?action=edit&menu=0',
             'action'        =>  'update',
             'menu'          =>  '0',
-            'menu-name'     =>  'menu',
-            'auto-add-pages'     =>  '1',
-            'menu-locations[primary]'     =>  '0',
-            'save_menu'     =>  '创建菜单',
+            'menu-name'     =>  $menu_name,
+            // 'auto-add-pages'     =>  '1',//自动将新的顶级页面添加至此菜单
         ];
+        if(isset($res_loca) && is_array($res_loca)){
+            $a_data=array_merge($a_data,$res_loca);
+        }
         $a_data['nav-menu-data']=sprintf('[%s]',json_encode($a_data));
-        $response=$this->curl_post($a_url,$a_data,$this->cookie);
+        $a_data['save_menu']='创建菜单';
+        for ($i = 0; $i < 10; $i++) {
+            $response=$this->curl_post($a_url,$a_data,$this->cookie);
+            if(strpos($response,'class="menu-name regular-text menu-item-textbox form-required" required="required" value="'.$menu_name.'"')!==false){
+                break;
+            }elseif(strpos($response,'和另一菜单名称冲突，请另选一个名称。') !== false){
+                echo "菜单:{$menu_name}已存在\n";
+                ////$this->menu_edit($menu_name);//编辑菜单
+                return true;
+            }
+            if($i==9){
+                echo "创建菜单失败,2创建菜单\n";
+                return false;
+            }
+            echo '网络不好2  ';
+        }
         
         
-        //获取分类目录
-        preg_match('/id="closedpostboxesnonce" name="closedpostboxesnonce" value="(.*?)"/',$response,$matches);
-        $closedpostboxesnonce = $matches[1];//key
-        preg_match('/id="meta-box-order-nonce" name="meta-box-order-nonce" value="(.*?)"/',$response,$matches);
-        $meta_box_order_nonce = $matches[1];//key
-        preg_match('/id="update-nav-menu-nonce" name="update-nav-menu-nonce" value="(.*?)"/',$response,$matches);
-        $update_nav_menu_nonce = $matches[1];//key
-        preg_match('/name="menu" id="menu" value="(.*?)"/',$response,$matches);
-        $menu_id = $matches[1];
-        preg_match('/<input type="hidden" name="_wp_http_referer" value="(.*?)"/',$response,$matches);
-        $mat_url = $matches[1];
-        
-        //preg_match('/name="menu-name" id="menu-name" type="text" class="menu-name regular-text menu-item-textbox form-required" required="required" value="(.*?)"/',$response,$menu_name);
-        preg_match('/name="menu-locations\[primary\]" id="locations-primary" value="(.*?)"/',$response,$menu_locations_primary);
-        
-        
-        preg_match('/<input type="hidden" id="menu-settings-column-nonce" name="menu-settings-column-nonce" value="(.*?)"/',$response,$mat_nonce);
+        //3分类添加至菜单
+        preg_match('/<input type="hidden" name="menu" id="menu" value="(.*?)"/',$response,$mat_menu);
+        preg_match('/<input type="hidden" id="menu-settings-column-nonce" name="menu-settings-column-nonce" value="(.*?)"/',$response,$mat_column_nonce);
         preg_match('/<ul id="categorychecklist" data-wp-lists="list:category" class="categorychecklist form-no-clear">([\s\S]*?)<\/ul>/',$response,$mat_html);
-        if(!$mat_html || !$mat_nonce){
-            // $this->file_record('创建菜单失败,获取分类失败');
+        if(!isset($mat_menu[1]) || !isset($mat_column_nonce[1]) || !isset($mat_html[1])){
             echo "创建菜单失败,获取分类失败\n";
             return false;
         }
+        $menu = $mat_menu[1];//下面复用 菜单id
+        $menu_settings_column_nonce=$mat_column_nonce[1];
+        $html=$mat_html[1];
+        
+        //获取菜单显示位置 $res_loca_new value值变化
+        preg_match('/<fieldset class="menu-settings-group menu-theme-locations">([\s\S]*?)<\/fieldset>/',$response,$mat_loca);
+        if(isset($mat_loca[1]) && $mat_loca[1]){
+            preg_match_all('/name="(.*?)"/',$mat_loca[1],$mat_name);
+            preg_match_all('/value="(.*?)"/',$mat_loca[1],$mat_value);
+            $cnum=count($mat_name[1]);
+            $res_loca_new=array();
+            for ($i = 0; $i < $cnum; $i++) {
+                $key=$mat_name[1][$i];
+                 $res_loca_new[$key]=$mat_value[1][$i];
+            }
+        }
+        //获取分类信息
+        $arr_html=explode("\n",trim($html));
         $p_data=array();
-        $arr_html=explode("\n",trim($mat_html[1]));
-        foreach ($arr_html as $key=>$val){
+        foreach ($arr_html as $val){
             preg_match_all('/name="(.*?)" value="(.*?)"/',$val,$mat);
             foreach ($mat[1] as $k1=>$v1){
                 if($mat[2][5]=='未分类'){
@@ -1221,26 +1239,25 @@ class WordPress{
         }
         $p_url=$this->host.'wp-admin/admin-ajax.php';
         $p_data['action']='add-menu-item';
-        $p_data['menu']=0;
-        $p_data['menu-settings-column-nonce']=$mat_nonce[1];
+        $p_data['menu']=$menu;
+        $p_data['menu-settings-column-nonce']=$menu_settings_column_nonce;
         for ($i = 0; $i < 10; $i++) {
             $response = $this->curl_post($p_url,$p_data,$this->cookie);
             if(strpos($response,'<div class="menu-item-bar">')!==false){
                 break;
             }
             if($i==9){
-                // $this->file_record('添加菜单失败,获取分类失败');
-                echo "添加菜单失败,获取分类失败\n";
+                echo "添加菜单失败,3分类添加至菜单\n";
                 return false;
             }
             echo '网络不好3  ';
         }
         
         
-        //保存菜单
-        $r_data=array();
+        //4保存菜单
         $arr_html=explode("</li>",trim($response));
-        foreach ($arr_html as $key=>$val){
+        $r_data=array();
+        foreach ($arr_html as $val){
             preg_match('/name="menu-item-db-id\[.*?\]" value="(.*?)"/',$val,$mat_id);
             preg_match_all('/name="(.*?)" value="(.*?)"/',$val,$mat);
             foreach ($mat[1] as $k1=>$v1){
@@ -1249,30 +1266,35 @@ class WordPress{
                 $r_data[$ss]='';
             }
         }
-        
         $r_data['closedpostboxesnonce']=$closedpostboxesnonce;
         $r_data['meta-box-order-nonce']=$meta_box_order_nonce;
         $r_data['update-nav-menu-nonce']=$update_nav_menu_nonce;
         $r_data['_wp_http_referer']='/wp-admin/nav-menus.php';
         $r_data['action']='update';
-        $r_data['menu']=$menu_id;
+        $r_data['menu']=$menu;
         $r_data['menu-name']=$menu_name;
-        $r_data['auto-add-pages']=1;
-        $r_data['menu-locations[primary]']=$menu_locations_primary[1];
-        $r_data['save_menu']='保存菜单';
-        
-        $json_data='[';
-        foreach ($r_data as $key=>$val){
-            $json_data = sprintf('{"name":"%s","value":"%s"},',$key,$val);
+        if(isset($res_loca_new) && is_array($res_loca_new)){
+            $r_data=array_merge($r_data,$res_loca_new);
         }
-        $json_data=substr($json_data,0,-1) . ']';
-        $r_data['nav-menu-data']=$json_data;
-        $r_url=$this->host.str_replace('&amp;','&',$mat_url);
+        $r_data['nav-menu-data']=sprintf('[%s]',json_encode($r_data));
+        $r_data['save_menu']='保存菜单';
+        $r_url=$this->host.'wp-admin/nav-menus.php?menu='.$menu;
         $response=$this->curl_post($r_url,$r_data,$this->cookie);
+        for ($i = 0; $i < 10; $i++) {
+             if(strpos($response,'<div id="message" class="updated notice is-dismissible"><p><strong>'.$menu_name.'</strong>已被更新。</p></div>') !== false){
+                 break;
+             }
+            // file_put_contents(__DIR__.'/cc.txt',$response);exit;
+            if($i==9){
+                echo "添加菜单失败,4保存菜单\n";
+                return false;
+            }
+            echo '网络不好4  ';
+        }
         echo "创建菜单成功\n";
         return true;
-        
     }
+
 
 
     // /* php解压文件

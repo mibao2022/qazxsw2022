@@ -196,16 +196,16 @@ foreach($site_arr as $key=>$val){
         continue;
     }
     
-    //添加js代码
-    $wp->add_js($cof_js);
-    $wp->create_js($cof_js,$cof_js_content);
-    $bt->SetFileAccess($rpath.'/'.$cof_js);
-    
     //解压seo插件 (改btapi解压)
     $bt->UnZip($seo_zipfile,$rpath.'/wp-content/plugins',$seo_zipfile_fix);
     
     //网站设置
     $wp->setting();
+
+    //添加js代码
+    $wp->add_js($cof_js);
+    $wp->create_js($cof_js,$cof_js_content);
+    $bt->SetFileAccess($rpath.'/'.$cof_js);
     
 }
 

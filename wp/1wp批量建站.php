@@ -3,7 +3,6 @@
 文件放在服务器上运行
 php /www/1111/1wp批量建站.php
 
-
 */
 
 
@@ -12,7 +11,7 @@ php /www/1111/1wp批量建站.php
 //---------------------------设置开始--------------------------------
 
 //宝塔面板地址*
-$cof_panel='http://202.165.121.194:8888/';
+$cof_panel='http://111.111.111.111:8888/';
 //宝塔API接口密钥*
 $cof_key='KHiEGcA8AUlKrPnvfDMMGOmvJUHA5nvM';
 //网站使用的php版本* (例7.2版本 写72)(推荐php7.0以上版本)
@@ -247,7 +246,6 @@ class WordPress{
 
     //网站设置
     public function setting(){
-        global $seo_zipfile;
         
         //常规设置
         $this->options_general();
@@ -260,8 +258,6 @@ class WordPress{
         
         //添加分类
         $this->category_add();
-        
-        
         
         //下载随机主题
         $theme=$this->theme_down();
@@ -283,7 +279,6 @@ class WordPress{
                 $this->plugin_seo_editgraph();
             }
         }
-        
         
         return $this;
     }
@@ -764,8 +759,6 @@ class WordPress{
         ];
         for ($i = 0; $i < 10; $i++) {
             $response = $this->curl_post($p_url,$p_data,$this->cookie);
-file_put_contents(__DIR__.'/cc.txt',$response);
-
             if(strpos($response,sprintf("value='%s'",$this->blog_name))!==false){
                 break;
             }
@@ -1284,7 +1277,6 @@ file_put_contents(__DIR__.'/cc.txt',$response);
              if(strpos($response,'<div id="message" class="updated notice is-dismissible"><p><strong>'.$menu_name.'</strong>已被更新。</p></div>') !== false){
                  break;
              }
-            // file_put_contents(__DIR__.'/cc.txt',$response);exit;
             if($i==9){
                 echo "添加菜单失败,4保存菜单\n";
                 return false;

@@ -1,6 +1,7 @@
 <?php
 /*创建wordpress站点
-文件放在服务器上运行
+* 文件放在服务器上运行
+* 日期4.20
 php /www/1111/1wp批量建站.php
 
 */
@@ -184,11 +185,13 @@ foreach($site_arr as $key=>$val){
     
     //安装wp
     if(!$wp->install()){
+        $wp->file_record('安装wp失败');
         $bt->WebDeleteSite($web_data['siteId'],$site);
         continue;
     }
     //登录wp
     if(!$wp->login()){
+        $wp->file_record('登录wp失败');
         $bt->WebDeleteSite($web_data['siteId'],$site);
         continue;
     }

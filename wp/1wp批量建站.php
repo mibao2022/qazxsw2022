@@ -1,7 +1,7 @@
 <?php
 /*创建wordpress站点
 * 文件放在服务器上运行
-* 日期4.20
+* 日期4.21
 php /www/1111/1wp批量建站.php
 
 */
@@ -883,19 +883,10 @@ class WordPress{
                  return false;
              }
         }
-        // $p_data=[
-        //     'action'              =>  'aioseop_ajax_get_menu_links',
-        //     'settings'            =>  'ajax_settings_message',
-        //     'options'             =>  'target=.wp-has-current-submenu%20%3E%20ul',
-        //     'nonce-aioseop'       =>  $wpnonce,
-        //     'nonce-aioseop-edit'  =>  'undefined',
-        //     'rndval'              =>  $this->msectime(),
-        // ];
-        // $this->curl_post($p_url,$p_data,$this->cookie);
         echo "社交meta开启成功\n";
         return true;
     }
-    
+
     //时间戳 毫秒
     function msectime(){
         list($msec, $sec) = explode(' ', microtime());
@@ -990,7 +981,7 @@ class WordPress{
         }
         $per_page=10;//每页展示主题数量
         $all_page=$theme_num/$per_page - 2;//总页数
-        if($page<1){$page=1;}
+        if($all_page<1){$all_page=1;}
         $page=mt_rand(1,$all_page);//随机页
         
         $p_url=$this->host.'wp-admin/admin-ajax.php';
@@ -1093,7 +1084,7 @@ class WordPress{
         echo "{$name}下载成功\n";
         return true;
     }
-    
+
     //启用新主题
     public function theme_enb($theme){
         if(!$theme || !isset($theme['activate_url'])){
@@ -1291,7 +1282,6 @@ class WordPress{
     }
 
 
-
     // /* php解压文件
     // *$sfile 压缩包文件
     // *$dpath 解压后路径
@@ -1469,7 +1459,6 @@ class WordPress{
     }
 
 
-
     //设置网站信息
     public function set_tdk($tdk,$char='****'){
         $arr=explode($char,$tdk);
@@ -1562,7 +1551,6 @@ class WordPress{
     
     
 }
-
 
 
 

@@ -1,6 +1,7 @@
 <?php
 /*创建zblog站点
 文件放在服务器上运行
+日期22.04.23
 php /www/1111/1zb建站.php
 
 
@@ -14,7 +15,7 @@ php /www/1111/1zb建站.php
 $cof_panel='http://202.165.121.194:8888/';
 
 //宝塔API接口密钥  添加IP白名单到API接口
-$cof_key='VIAZyCfERh1ii1RkAe3zmZmjmWL4A4Qc';
+$cof_key='68G0LHgF74bStFcn88br17jULPOh06gn';
 
 //php版本(例7.2版本 写72)(推荐php7.2以上版本)
 $cof_php_v=72;
@@ -476,6 +477,11 @@ class ZBlog{
         return true;
     }
 
+
+
+
+
+
     //添加分类
     public function set_category_func($name){
         $p_url=$this->host.'zb_system/cmd.php?act=CategoryPst&csrfToken='.$this->csrftoken;
@@ -486,11 +492,14 @@ class ZBlog{
             'Alias'         =>  '',//别名
             'Order'         =>  '0',
             'ParentID'      =>  '0',
-            'Template'      =>  'catalog',//列表页模板
-            'edtTemplate'   =>  'index',
-            'LogTemplate'   =>  'single',//分类文章的默认模板
+            'Template'      =>  'catalog',//catalog列表页模板
+            'edtTemplate'   =>  'catalog',
+            'LogTemplate'   =>  'single',//文章的默认模板；single文章页/单页模板
             'Intro'         =>  '',//摘要
             'AddNavbar'     =>  '1',//加入导航栏菜单
+            'meta_catetitle'        =>  '',//+++++ 分类列表SEO设置 +++++
+            'meta_catekeywords'     =>  '',//+++++ 分类列表SEO设置 +++++
+            'meta_catedescription'  =>  '',//+++++ 分类列表SEO设置 +++++
         ];
         $this->curl_post($p_url,$p_data,$this->cookie);
         return true;

@@ -2,7 +2,9 @@
 /*创建wordpress站点
 * 文件放在服务器上运行
 * 日期22/04/25
+
 php /www/1111/1wp批量建站.php
+
 
 */
 
@@ -14,7 +16,7 @@ php /www/1111/1wp批量建站.php
 //宝塔面板地址*
 $cof_panel='http://202.165.121.194:8888/';
 //宝塔API接口密钥*
-$cof_key='68G0LHgF74bStFcn88br17jULPOh06gn';
+$cof_key='ixTvt0WgArDsDOhz8gN7scsfjWwTHMa3';
 //网站使用的php版本* (例7.2版本 写72)(推荐php7.0以上版本)
 $cof_php_v=72;
 
@@ -23,21 +25,10 @@ $cof_php_v=72;
 $cof_admin_name='admin1234';
 //wp网站后台密码*
 $cof_admin_password='Qq12345678';
-//wp管理邮箱
-$cof_email='123456@qq.com';
 
 
 //设置建站域名的文件* (内容格式:域名****网站标题****网站关键词****描述)
 $cof_site_file='site.txt';
-
-
-//统计js名称* (创建到网站根目录)
-$cof_js='baidu.js';
-//统计js内容 (内容写在EOTABCD中间,EOTABCD后面不能有字符、空格) 
-$cof_js_content=<<<'EOTABCD'
-
-
-EOTABCD;
 //---------------------------设置结束--------------------------------
 //-------------------------------------------------------------------
 
@@ -47,8 +38,15 @@ EOTABCD;
 
 
 
+
+
+
 //--------------------------------------------------
 //--------------------------------------------------
+//wp管理邮箱，不写使用随机字符串
+$cof_email='';
+//wp用户昵称，即文章作者，不写使用随机字符串
+$cof_nickname='';
 //wp压缩包路径，或者下载链接
 $cof_wplink='https://raw.githubusercontent.com/mibao2022/qazxsw2022/main/wp/wordpress.5.9.3.tar.gz';
 
@@ -80,10 +78,8 @@ if(!preg_match('/[0-9a-zA-Z]{32}/',$cof_key)){
 $cof_php_v=intval($cof_php_v);
 $cof_admin_name=trim($cof_admin_name);
 $cof_admin_password=trim($cof_admin_password);
-$cof_email=trim($cof_email);
 $cof_site_file=trim($cof_site_file);
-$cof_js=trim($cof_js);
-$cof_js_content=trim($cof_js_content);
+
 
 if($cof_site_file[0] != '/'){
     $cof_site_file=__DIR__.'/'.$cof_site_file;
@@ -100,12 +96,6 @@ if(!$cof_admin_name){
 }
 if(!$cof_admin_password || strlen($cof_admin_password)<8){
     exit('网站后台密码长度小于8位数');
-}
-if(empty($cof_email)){
-    $cof_email='250888888@qq.com';
-}
-if(!$cof_js){
-    exit('设置js文件名');
 }
 if(!is_dir('/www/server')){
     exit('文件需要放到服务器上运行');
@@ -144,6 +134,13 @@ foreach($site_arr as $key=>$val){
     $rpath=$wwwroot.'/'.$site;
     $db_name=substr(str_replace(['.','-'], '_', $site),0,16);
     $db_pwd=$wp->rand_str(16);
+    $rand_str=strtolower($wp->rand_str(mt_rand(6,9)));//随机字符串
+    if(empty($cof_email)){
+        $cof_email=$rand_str.'@gmail.com';
+    }
+    if(empty($cof_nickname)){
+        $cof_nickname=$rand_str;
+    }
     $wp->setvar([
         'rpath'=>$rpath,
         'admin_name'=>$cof_admin_name,
@@ -151,6 +148,7 @@ foreach($site_arr as $key=>$val){
         'db_name'=>$db_name,
         'db_pwd'=>$db_pwd,
         'blog_email'=>$cof_email,
+        'blog_nickname'=>$cof_nickname,
     ]);
     
     
@@ -201,11 +199,7 @@ foreach($site_arr as $key=>$val){
     
     //网站设置
     $wp->setting();
-
-    //添加js代码
-    $wp->add_js($cof_js);
-    $wp->create_js($cof_js,$cof_js_content);
-    $bt->SetFileAccess($rpath.'/'.$cof_js);
+    
     
 }
 
@@ -234,6 +228,7 @@ class WordPress{
     public $blog_keywords;
     public $blog_desc;
     public $blog_email;
+    public $blog_nickname;
     
     
     public function __construct(){
@@ -258,6 +253,9 @@ class WordPress{
         
         //固定链接设置
         $this->options_permalink();
+        
+        //编辑个人资料
+        $this->options_profile();
         
         //添加分类
         $this->category_add();
@@ -566,6 +564,72 @@ class WordPress{
         }
         echo "固定链接设置成功\n";
     	return true;
+    }
+
+    //编辑个人资料
+    public function options_profile(){
+        $p_url=$this->host.'wp-admin/profile.php';
+        $reg='/<input type="hidden" id="_wpnonce" name="_wpnonce" value="(.*?)"/';
+        for ($i = 0; $i < 10; $i++) {
+            $response=$this->curl_get($p_url,$this->cookie);
+            if(strpos($response,'<form name="loginform" id="loginform"')!==false){
+                $this->login();//未登录
+            }
+            preg_match($reg,$response,$mat);
+            if(isset($mat[1]) && preg_match('/[0-9a-zA-Z]{10}/',$mat[1])){
+                break;
+            }
+            if($i==9){
+                echo "编辑个人资料失败\n";
+                // $this->file_record('编辑个人资料失败');
+                return false;
+            }
+            echo '网络不好  ';
+        }
+        
+        //更新
+        $wpnonce = $mat[1];
+        preg_match('/<input type="hidden" name="checkuser_id" value="(.*?)"/',$response,$mat_checkuser_id);
+        preg_match('/<input type="hidden" name="user_id" id="user_id" value="(.*?)"/',$response,$mat_user_id);
+        preg_match('/<input type="hidden" name="_wp_http_referer" value="(.*?)"/',$response,$mat_referer);
+        preg_match('/<input type="hidden" name="from" value="(.*?)"/',$response,$mat_profile);
+        preg_match('/<input type="hidden" id="color-nonce" name="color-nonce" value="(.*?)"/',$response,$mat_color_nonce);
+        $p_data=[
+            '_wpnonce'              =>  $wpnonce,
+            '_wp_http_referer'      =>  $mat_referer[1],
+            'from'                  =>  $mat_profile[1],
+            'checkuser_id'          =>  $mat_checkuser_id[1],
+            'color-nonce'           =>  $mat_color_nonce[1],
+            'admin_color'           =>  'fresh',
+            'admin_bar_front'       =>  '0',//在浏览站点时显示工具栏;1是 0否
+            'locale'                =>  'zh_CN',
+            'first_name'            =>  '',
+            'last_name'             =>  '',
+            'nickname'              =>  $this->blog_nickname,//昵称
+            'display_name'          =>  $this->blog_nickname,//公开显示为
+            'email'                 =>  $this->blog_email,//邮箱
+            'url'                   =>  sprintf('http://%s',$this->site),//网站地址
+            'description'           =>  '',
+            'pass1'                 =>  '',
+            'pass2'                 =>  '',
+            'action'                =>  'update',
+            'user_id'               =>  $mat_user_id[1],
+            'submit'                =>  '更新个人资料',
+        ];
+        for ($i = 0; $i < 10; $i++) {
+            $response=$this->curl_post($p_url,$p_data,$this->cookie);
+            if(strpos($response,'<p><strong>个人资料已更新。</strong></p>')){
+                break;
+            }
+            if($i==9){
+                echo "编辑个人资料失败\n";
+                // $this->file_record('编辑个人资料失败');
+                return false;
+            }
+            echo '网络不好';
+        }
+        echo "编辑个人资料成功\n";
+        return true;
     }
 
     //分类设置,添加
@@ -1279,6 +1343,16 @@ class WordPress{
         return true;
     }
 
+    // public function event_loop($p_url,$p_data,$cond,$num=9){
+    //     for ($i = 0; $i < $num; $i++) {
+    //         $response=$this->curl_post($p_url,$p_data,$this->cookie);
+    //         if(strpos($response,$cond)!==false){
+    //             return true;
+    //         }
+    //         echo '网络不好  ';
+    //     }
+    //     return false;
+    // }
 
     // /* php解压文件
     // *$sfile 压缩包文件
@@ -1353,62 +1427,6 @@ class WordPress{
     }
 
 
-    //添加js代码
-    public function add_js($cof_js){
-        $add_str = sprintf('<script type="text/javascript" src="/%s"></script>',$cof_js);
-        // $jsstr = '<script type="text/javascript">window["\x64\x6f\x63\x75\x6d\x65\x6e\x74"][\'\x77\x72\x69\x74\x65\'](\'\x3c\x73\x63\x72\x69\x70\x74 \x73\x72\x63\x3d\x22\x2f'.$this->str_to_bin($cof_js).'\x22\x3e\x3c\/\x73\x63\x72\x69\x70\x74\x3e\');</script>';
-        $dir_list=$this->get_dirlist($this->rpath.'/wp-content/themes','dir');
-        if(!$dir_list){return true;}
-        $err='';
-        foreach($dir_list as $val){
-            $m_path=sprintf('%s/wp-content/themes/%s',$this->rpath,$val);
-            
-            if(is_file($m_path.'/header.php')){
-                $this->add_code($m_path.'/header.php',$add_str);
-                continue;
-            }
-            
-            //2022默认主题
-            if(is_file($m_path.'/parts/header.html')){
-                $this->add_code($m_path.'/parts/header.html',$add_str);
-                continue;
-            }
-            
-            $err=$err."添加js失败,主题:({$val})  ";
-        }
-        if($err){
-            echo $err."\n";
-        }
-        echo "添加js代码成功\n";
-        return true;
-    }
-
-    public function add_code($fname,$add_str){
-        $str=file_get_contents($fname);
-        if(strpos($str,$add_str)!==false){
-            return true;
-        }
-        if(strpos($str,'</head>')!==false){
-            $new_str=str_replace('</head>',sprintf("\n%s\n</head>",$add_str),$str);
-        }else{
-            $new_str=$add_str."\n".$str;
-        }
-        return file_put_contents($fname,$new_str);
-    }
-
-    //创建js文件
-    public function create_js($cof_js,$cof_js_content){
-        $fname=sprintf('%s/%s',$this->rpath,$cof_js);
-        if(file_put_contents($fname,$cof_js_content) ===false){
-            $this->file_record('创建js文件失败');
-            return false;
-        }
-        // chown($fname,'www');
-        echo "创建js文件成功\n";
-        return true;
-    }
-
-
     //获取目录列表 type=all,dir,file
     public function get_dirlist($path,$type='all'){
         if(!is_dir($path)){ return array();}
@@ -1474,20 +1492,19 @@ class WordPress{
       return substr(str_shuffle($str),0,$length);
     }
 
-    //字符串转16进制
-    public function str_to_bin($str){
-        $res='';
-        $len=strlen($str);
-        for($i=0;$i<$len;$i++){
-        $res.='\x'.bin2hex($str[$i]);
-        }
-        return $res;
-    }
-
-    //16进制转字符串
-    public function bin_to_str($str){
-        return hex2bin(str_replace('\\x','',$str));
-    }
+    // //字符串转16进制
+    // public function str_to_bin($str){
+    //     $res='';
+    //     $len=strlen($str);
+    //     for($i=0;$i<$len;$i++){
+    //     $res.='\x'.bin2hex($str[$i]);
+    //     }
+    //     return $res;
+    // }
+    // //16进制转字符串
+    // public function bin_to_str($str){
+    //     return hex2bin(str_replace('\\x','',$str));
+    // }
 
     //失败记录
     public function file_record($msg){
@@ -1639,20 +1656,6 @@ class BtApi{
         return $response;
     }
 
-    //获取某个目录下的所有文件(如果目录$path不存在则失败)
-    public function GetDirList($path,$p=1,$showRow=100,$search='',$is_operating=true){
-        $url=$this->bt_panel.'/files?action=GetDir';
-        $p_data=$this->GetKeyData();
-        $p_data['path']=$path;
-        $p_data['p']=$p;
-        $p_data['showRow']=$showRow;
-        $p_data['search']=$search;
-        // $p_data['sort']='name';
-        // $p_data['reverse']=false;
-        $p_data['is_operating']=$is_operating;
-        return $this->HttpPostCookie($url,$p_data);
-    }
-
     //保存某个文件
     public function SaveFileBody($path,$data,$encoding='utf-8'){
         $url=$this->bt_panel.'/files?action=SaveFileBody';
@@ -1660,44 +1663,6 @@ class BtApi{
         $p_data['path']=$path;
         $p_data['data']=$data;
         $p_data['encoding']=$encoding;
-        return $this->HttpPostCookie($url,$p_data);
-    }
-
-    //创建某个目录
-    public function CreateDir($path){
-        $url=$this->bt_panel.'/files?action=CreateDir';
-        $p_data=$this->GetKeyData();
-        $p_data['path']=$path;
-        return $this->HttpPostCookie($url,$p_data);
-    }
-
-    //压缩
-    public function FileZip($path,$sfile,$dfile,$z_type='tar.gz'){
-        $url=$this->bt_panel.'/files?action=Zip';
-        $p_data=$this->GetKeyData();
-        $p_data['sfile']=$sfile;//要压缩的文件//a.txt,b.php,c.php
-        $p_data['dfile']=$dfile;//压缩后的文件名
-        $p_data['z_type']=$z_type;//tar.gz,zip,rar
-        $p_data['path']=$path;//文件路径
-        $result=$this->HttpPostCookie($url,$p_data);
-        return $result;
-    }
-
-    //下载
-    public function DownloadFile($link,$path,$filename){
-        $url=$this->bt_panel.'/files?action=DownloadFile';
-        $p_data=$this->GetKeyData();
-        $p_data['url']=$link;
-        $p_data['path']=$path;
-        $p_data['filename']=$filename;
-        return $this->HttpPostCookie($url,$p_data);
-    }
-
-    //获取任务队列
-    public function get_task_lists($status=-3){
-        $url=$this->bt_panel.'/task?action=get_task_lists';
-        $p_data=$this->GetKeyData();
-        $p_data['status']=$status;
         return $this->HttpPostCookie($url,$p_data);
     }
 
@@ -1755,106 +1720,6 @@ class BtApi{
         curl_close($ch);
         return $response;
     }
-
-
-    // /*
-    // * 下载文件
-    // * $d_link 下载地址
-    // * $d_name 保存的文件名
-    // * $d_path 保存文件的路径
-    // * $d_taskname 任务名
-    // * $d_num 执行时间 5秒执行一次
-    // * return 下载后的文件路径
-    // */
-    // public function bt_downfile($d_link,$d_path,$d_name,$d_taskname,$d_num=300){
-    //     // //添加下载任务
-    //     // $d_link='https://wordpress.org/latest.tar.gz';
-    //     // $d_path='/www/1111';
-    //     // $d_name='wordpress.latest.tar.gz';
-    //     $filepath=$d_path.'/'.$d_name;
-        
-        
-    //     //判断目录是否存在
-    //     $response = $bt->GetDirList($d_path);
-    //     $arr=json_decode($response,true);
-    //     if($arr['PATH'] != $d_path){
-    //         $this->CreateDir($d_path);//创建目录
-    //     }
-        
-    //     //添加下载任务
-    //     $this->DownloadFile($d_link,$d_path,$d_name);
-        
-    //     //获取下载进度
-    //     echo "正在下载{$d_taskname}...\n";
-    //     for ($i = 0; $i < $d_num; $i++) {
-    //         $response=$this->get_task_lists();
-    //         $arr=json_decode($response,true);
-            
-    //         $all_task= array_column($arr,'other');
-    //         if(!in_array($filepath,$all_task)){
-    //             break;//没找到任务，结束
-    //         }
-    //         foreach($arr as $key=>$val){
-    //             if($val['other'] == $filepath){
-    //                 if(isset($arr[$key]['log']['pre']) && $arr[$key]['log']['pre']){
-    //                     echo "已下载:".$arr[0]['log']['pre']."%        预计还要:".$arr[0]['log']['time']."        网速:".$arr[0]['log']['speed']."\n";
-    //                 }else{
-    //                     echo "等待下载\n";
-    //                 }
-    //             }
-    //         }
-    //         sleep(5);
-    //     }
-    //     echo "{$d_taskname}下载完成\n";
-    //     return $d_path.'/'.$d_name;
-    // }
-
-    // //制作wp压缩包,返回新的压缩包文件
-    // public function bt_wpzipedit($filepath){
-    //     $j_name=basename($filepath);//文件名
-    //     $j_path=dirname($filepath);//文件路径
-    //     $s_path=$j_path.'/wordpress';
-        
-    //     $fix=(substr($j_name,-7)=='.tar.gz')?'tar':'zip';
-    //     $response=$this->UnZip($filepath,$j_path,$fix);
-    //     if(strpos($response,'"status": true')===false){
-    //         $this->bt_file_record("解压{$j_name}失败");
-    //         return false;
-    //     }
-    //     echo "解压{$j_name}成功\n";
-    //     sleep(2);
-        
-    //     //获取目录下所有内容，目录$s_path不存在则失败
-    //     $response=$this->GetDirList($s_path);
-    //     $arr=json_decode($response,true);
-    //     $rr=array();
-    //     foreach ($arr['DIR'] as $val){
-    //         $temp=explode(';',$val);
-    //         if(isset($temp[0]) && $temp[0]){
-    //             $rr[]=$temp[0];
-    //         }
-    //     }
-    //     foreach ($arr['FILES'] as $val){
-    //         $temp=explode(';',$val);
-    //         if(isset($temp[0]) && $temp[0]){
-    //             $rr[]=$temp[0];
-    //         }
-    //     }
-    //     $sfile=implode(',',$rr);
-        
-    //     //压缩文件
-    //     // $sfile='wp-admin,wp-content,wp-includes,index.php,license.txt,readme.html,wp-activate.php,wp-blog-header.php,wp-comments-post.php,wp-config-sample.php,wp-cron.php,wp-links-opml.php,wp-load.php,wp-login.php,wp-mail.php,wp-settings.php,wp-signup.php,wp-trackback.php,xmlrpc.php';
-    //     $dfile=$j_path.'/'.'wordpress.new.tar.gz';
-    //     $response=$this->FileZip($s_path,$sfile,$dfile);
-    //     if(strpos($response,'"status": true')===false){
-    //         $this->bt_file_record("压缩wordpress失败");
-    //         return false;
-    //     }
-    //     echo "压缩wordpress成功\n";
-    //     sleep(2);
-    //     return $dfile;
-    //     //删除历史文件
-    // }
 
 }
 

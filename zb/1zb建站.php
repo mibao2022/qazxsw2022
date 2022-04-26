@@ -1,7 +1,7 @@
 <?php
 /*创建zblog站点
 文件放在服务器上运行
-日期22.04.23
+日期22.04.26
 php /www/1111/1zb建站.php
 
 
@@ -13,38 +13,22 @@ php /www/1111/1zb建站.php
 
 //宝塔面板地址
 $cof_panel='http://202.165.121.194:8888/';
-
 //宝塔API接口密钥  添加IP白名单到API接口
-$cof_key='68G0LHgF74bStFcn88br17jULPOh06gn';
-
+$cof_key='1LkO65P8UKjQ3mrFF6ia5Z7V4bCIdaP0';
 //php版本(例7.2版本 写72)(推荐php7.2以上版本)
 $cof_php_v=72;
 
 
 //zb网站后台账号
 $cof_username='admin1234';
-
 //zb网站后台密码 (8位或更长的数字或字母组合)
 $cof_password='Qq12345678';
-
 //zb网站添加友情链接的数量;0不添加，4代表添加4个;
 $cof_link='6';
 
 
 //设置建站域名的文件 (内容格式:域名****网站标题****网站关键词****网站描述****网站版权说明)
 $cof_site_file='site.txt';
-
-//统计js名称 (创建到站点根目录)
-$cof_js = 'baidu.js';
-
-//统计js内容 (内容写在EOTABCD中间,EOTABCD后面不能有字符、空格) 
-$cof_js_content = <<<'EOTABCD'
-
-
-
-EOTABCD;
-
-
 //---------------------------设置结束---------------------------------
 
 
@@ -97,8 +81,6 @@ $cof_php_v=intval($cof_php_v);
 $cof_username=trim($cof_username);
 $cof_password=trim($cof_password);
 $cof_site_file=trim($cof_site_file);
-$cof_js=trim($cof_js);
-$cof_js_content=trim($cof_js_content);
 $cof_blog_subname=trim($cof_blog_subname);
 $cof_link=intval(trim($cof_link));
 if($cof_site_file[0] != '/'){
@@ -115,9 +97,6 @@ if(!$cof_username){
 }
 if(!$cof_password || strlen($cof_password)<8){
     exit('后台密码长度小于8位数');
-}
-if(!$cof_js){
-    exit('设置js文件名');
 }
 if(!is_dir('/www/server')){
     exit('文件需要放到服务器上运行');
@@ -205,9 +184,6 @@ foreach($site_arr as $key=>$val){
     //添加友情链接代码到模板中
     $zblog->file_addlink();
     
-    //添加js代码
-    $zblog->add_js($cof_js);
-    $zblog->create_js($cof_js,$cof_js_content);
     
     //解压地图插件 (改btapi解压)
     $bt->UnZip($map_zipfile,$rpath.'/zb_users/plugin',$map_zipfile_fix);
@@ -217,7 +193,6 @@ foreach($site_arr as $key=>$val){
     
     //清空缓存并重新编译模板
     $zblog->clearcacahe();
-    $bt->SetFileAccess($rpath.'/'.$cof_js);
     
 }
 
@@ -1042,55 +1017,6 @@ class ZBlog{
         $this->delete_dir($this->rpath.'/zb_users/theme/os2020');
     }
 
-    //主题header.php文件 添加js代码
-    public function add_js($cof_js){
-        $add_str = sprintf('<script type="text/javascript" src="/%s"></script>',$cof_js);
-        // $jsstr = '<script type="text/javascript">window["\x64\x6f\x63\x75\x6d\x65\x6e\x74"][\'\x77\x72\x69\x74\x65\'](\'\x3c\x73\x63\x72\x69\x70\x74 \x73\x72\x63\x3d\x22\x2f'.$this->str_to_bin($cof_js).'\x22\x3e\x3c\/\x73\x63\x72\x69\x70\x74\x3e\');</script>';
-        $dir_list=$this->get_dirlist($this->rpath.'/zb_users/theme','dir');
-        if(!$dir_list){return true;}
-        foreach($dir_list as $val){
-            $fname=sprintf('%s/zb_users/theme/%s/template/header.php',$this->rpath,$val);
-            $str=file_get_contents($fname);
-            //判断是否加过
-            if(strpos($str,$add_str)!==false){continue;}
-            if(strpos($str,'</head>')!==false){
-                $new_str=str_replace('</head>',sprintf("\n%s\n</head>",$add_str),$str);
-            }else{
-                $new_str=$add_str."\n".$str;
-            }
-            file_put_contents($fname,$new_str);
-        }
-        echo "添加js代码成功\n";
-        return true;
-    }
-    
-    //字符串转16进制
-    public function str_to_bin($str){
-        $res='';
-        $len=strlen($str);
-        for($i=0;$i<$len;$i++){
-        $res.='\x'.bin2hex($str[$i]);
-        }
-        return $res;
-    }
-
-    //16进制转字符串
-    public function bin_to_str($str){
-        return hex2bin(str_replace('\\x','',$str));
-    }
-    
-    //创建统计js文件
-    public function create_js($cof_js,$cof_js_content){
-        $fname=sprintf('%s/%s',$this->rpath,$cof_js);
-        if(file_put_contents($fname,$cof_js_content) ===false){
-            $this->file_record('创建js文件失败');
-            return false;
-        }
-        // chown($fname,'www');
-        echo "创建js文件成功\n";
-        return true;
-    }
-
     //网站分类名称
     public function rand_lanmu($length='5'){
         $lanmu=['美食菜谱','交通违章','娱乐休闲','热点资讯','其他类别','新闻最新','娱乐明星','封面故事','财经股票','购车中心','体育滚动','科技滚动','移动互联','房产新闻','读书书库','新游抢号','大公故事','中央文件','一带一路','娱乐资讯','八卦爆料','电影资讯','电视资讯','综艺资讯','动漫资讯','香港娱乐','台湾娱乐','日本娱乐','韩国娱乐','欧美娱乐','海外娱乐','音乐资讯','戏剧演出','明星访谈','娱乐评论','高教视点','国内评论','新闻热评','滚动图片','新闻图片','人物楷模','人事任免','权威发布','独家策划','光明推荐','政策解读','热点专题','滚动播报','国际观察','外媒聚焦','环球博览','图片新闻','大千世界','滚动大图','军事视点','中国军情','台海聚焦','军营文化','军旅人生','国际军情','邻邦扫描','武器装备','军史揭秘','视频新闻','军事专题','法治要闻','法眼观察','反腐倡廉','案件快递','法治人物','法院动态','平安中国','法治专题','知识产权','要点新闻','大咖体谈','风云人物','综合体育','最新图片','光明图刊','国内专题','国际专题','教育专题','科技专题','文化专题','卫生专题','人物专题','经济专题','体育专题','直播专题','经济要闻','光明独家','民生热点','今日头版','金融集萃','今日头条','行业动态','精彩图集','滚动新闻','食品要闻','光明述评','行业资讯','秀色可餐','权威发声','营养学院','光明文化','文化观察','光明产业','视觉大观','人文百科','滚动读报','演出资讯','创新创业','公司焦点','科教资讯','人工智能','图个明白','食品健康','军事论剑','天文地理','科学之子','知识分子','科普影视','科普阅读','科普评论','能源财经','生态环保','能源人物','企业观察','图说能源','家电人物','产品资讯','新品评测','焦点人物','会议快讯','改革探索','教育公平','理论专题','新书推荐','理论导读','理论课堂','治国理政','线下沙龙','党建动态','党建专家','党员风采','党建理论','党建纵横','高校党建','基层党建','企业党建','思政工作','机关党建','党建论坛','军队党建','党报解读','廉政报道','党建文献','党情博览','学术会议','学人风采','图书推荐','要闻推荐','学术小品','学术专题','论文推荐','机构推荐','光明观察','光明时评','光明言论','百家争鸣','时评专题','漫画天下','光明时刻','专家评论','节日读书','教育人物','招生信息','光明教育','高招信息','要闻时评','健康视点','资讯速递','健康科普','名医名院','医疗专家','疾病护理','医疗前沿','品牌活动','曝光信息','健康常识','美容美体','营养保健','医患情深','第一观察','文化娱乐','人文历史','光明讲坛','电影短片','智慧思想','热点解读','文化艺术','精彩观点','往期回顾','美容彩妆','婚嫁亲子','自然环境','城市人文','乡土人文','建筑装饰','人物肖像','其他图片','图片分享','图片论坛','光明掠影','今日推荐','文学品读','书人茶座','读者天地','影像故事','热点关注','公益影像','公益短片','焦点对话','移动媒体','云端读报','光明报系','博览群书','行业热点','各地非遗','匠心物语','非遗影像','镇馆之宝','战线联播','中文国际','国防军事','社会与法','体育赛事','农业农村','推荐专题','媒体聚焦','教育评论','图解教育','图说新闻','工作动态','网上民声','爱心无限','走向深蓝','网上问法','烟台力量','胶东观潮','文化教育','地方民族','时政新闻','理论新闻','社会新闻','国际新闻','财经新闻','产经新闻','金融新闻','汽车新闻','生活新闻','台湾新闻','港澳新闻','华人新闻','娱乐新闻','体育新闻','文化新闻','网络直播','新闻日历','最新资讯','最新动态','业界资讯','推荐资讯','热门阅读','时政要闻','独家原创','一图观政','即时报道','外媒言论','热点评论','高端访谈','寰球图解','专题报道','记者专栏','新华财眼','图解财经','商界大咖','别出新财','国内经济','地方要闻','微观中国','地方专题','投教基地','国防动员','军民融合','航天防务','华人故事','海归就业','即时新闻','港澳点睛','港澳来电','新华看台','两岸台商','大陆之声','读家对话','传媒聚焦','传媒视点','传媒经济','国际传播','传媒图库','传媒研究','传媒管理','狮城动态','中新交流','中美交流','一带一路','丝路聚焦','深度透视','丝路商机','社区互动','新华调查','行业新闻','国际教育','金融联播','金融家说','金融音画','数说金融','普惠金融','辟谣联盟','电商频道','茶业频道','原创专栏','部委动态','地方监管','食话实说','今日要闻','热点追踪','能说会道','图解能源','行业活动','文化地图','视频访谈','非遗传承','专题活动','产业政策','文化名人','政策风向','体育产业','中国足球','国社体育','品牌赛事','精彩专题','光影在线','在线旅游','召闻天下','部委在线','产业动态','中医中药','银色产业','健康中国','青年医生','健康访谈','健康视野','地方动态','政策法规','新华炫视','健康解码','数据新闻','大美中国','信息服务','微言大义','一周点评','道听图说','会展频道','测绘地理','影讯精选','今日焦点'];
@@ -1183,43 +1109,6 @@ class ZBlog{
         }
         return false;
     }
-
-    // /* php解压文件
-    // *$sfile 压缩包文件
-    // *$dpath 解压后路径
-    // */
-    // public function unzip_file($sfile,$dpath){
-    //     //使用宝塔api解压，得到www权限文件
-    //     if(substr($sfile,-7)=='.tar.gz'){
-    //         $phar = new PharData($sfile);
-    //         $phar->extractTo($dpath, null, true);
-    //         // $this->recurse_chown_chgrp($dpath);//修改用户组
-    //     }elseif(substr($sfile,-4)=='.zip'){
-    //         $zip = new ZipArchive();
-    //         $zip->open($sfile);
-    //         $zip->extractTo($dpath);
-    //         $zip->close();
-    //         // $this->recurse_chown_chgrp($dpath);//修改用户组
-    //     }else{
-    //         //rar文件,使用btapi解压
-    //         exit('不支持的压缩包文件后缀：'.basename($sfile));
-    //     }
-    //     return true;
-    // }
-    // //修改用户组
-    // function recurse_chown_chgrp($mypath, $uid='www', $gid='www'){
-    //     $d = opendir ($mypath) ;
-    //     while(($file = readdir($d)) !== false) {
-    //         if ($file != "." && $file != ".." && $file != ".user.ini") {
-    //             $typepath = $mypath . "/" . $file ;
-    //             if (filetype ($typepath) == 'dir') {
-    //                 $this->recurse_chown_chgrp ($typepath, $uid, $gid);
-    //             }
-    //             chown($typepath, $uid);
-    //             chgrp($typepath, $gid);
-    //         }
-    //     }
-    // }
 
     //下载文件
     public function down_file($d_link,$sfile){

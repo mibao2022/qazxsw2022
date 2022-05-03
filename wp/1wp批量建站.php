@@ -14,11 +14,11 @@ php /www/1111/1wp批量建站.php
 //---------------------------设置开始--------------------------------
 
 //宝塔面板地址*
-$cof_panel='http://202.165.121.194:8888/';
+$cof_panel='http://111.165.121.111:8888/';
 //宝塔API接口密钥*
-$cof_key='ixTvt0WgArDsDOhz8gN7scsfjWwTHMa3';
-//网站使用的php版本* (例7.2版本 写72)(推荐php7.0以上版本)
-$cof_php_v=72;
+$cof_key='1LkO65P8UKjQ111FF6ia5Z7V4bCIdaP0';
+//网站使用的php版本(推荐php7.0以上版本)
+$cof_php_v='7.2';
 
 
 //wp网站后台账号*
@@ -72,9 +72,10 @@ if($cof_update){$wp->upwp();exit();}
 $cof_panel=rtrim($cof_panel,'/');
 $cof_key=trim($cof_key);
 if(!preg_match('/[0-9a-zA-Z]{32}/',$cof_key)){
-    exit('设置正确的宝塔API接口密钥');
+    exit("设置正确的宝塔API接口密钥\n");
 }
 
+$cof_php_v = str_replace('.','',$cof_php_v);
 $cof_php_v=intval($cof_php_v);
 $cof_admin_name=trim($cof_admin_name);
 $cof_admin_password=trim($cof_admin_password);
@@ -85,26 +86,26 @@ if($cof_site_file[0] != '/'){
     $cof_site_file=__DIR__.'/'.$cof_site_file;
 }
 if(!is_readable($cof_site_file)){
-    exit('设置建站域名的文件');
+    exit("设置建站域名的文件\n");
 }
 
 if(!$cof_php_v || $cof_php_v<54){
-    exit('填写正确的php版本');
+    exit("填写正确的php版本\n");
 }
 if(!$cof_admin_name){
-    exit('网站后台账户为空');
+    exit("网站后台账户为空\n");
 }
 if(!$cof_admin_password || strlen($cof_admin_password)<8){
-    exit('网站后台密码长度小于8位数');
+    exit("网站后台密码长度小于8位数\n");
 }
 if(!is_dir('/www/server')){
-    exit('文件需要放到服务器上运行');
+    exit("文件需要放到服务器上运行\n");
 }
 if(!$cof_wplink){
-    exit('设置wp压缩包路径');
+    exit("设置wp压缩包路径\n");
 }
 if(!$cof_browse){
-    exit('设置下载模板主题类型');
+    exit("设置下载模板主题类型\n");
 }
 
 //读取域名
@@ -121,6 +122,15 @@ if($cof_wplink[0] == '/' && is_file($cof_wplink)){
 }
 $seo_zipfile=$wp->down_seozip();
 $bt=new BtApi($cof_panel,$cof_key);
+//测试宝塔连接
+$response=$bt->getLogs();
+if(!$response){
+    exit("宝塔api连接失败\n");
+}
+if(strpos($response,'status": false')){
+    exit($response);
+}
+
 $bt->SetFileAccess($wp_zipfile);
 $bt->SetFileAccess($seo_zipfile);
 $wp_zipfile_fix= (substr($wp_zipfile,-7)=='.tar.gz')?'tar':'zip';
@@ -295,7 +305,7 @@ class WordPress{
             if(strpos($response,'<h1 class="screen-reader-text">开始之前</h1>')!==false || strpos($response,'<h1 class="screen-reader-text">Before getting started</h1>')!==false){
                 break;
             }elseif(strpos($response,'There has been a critical error on this website')!==false || strpos($response,'Permission denied')!==false){
-                exit('修改wp文件权限为755');
+                exit("修改wp文件权限为755\n");
             }
             if($i==9){
                 $this->file_record('安装失败,网络连接失败');
@@ -601,7 +611,7 @@ class WordPress{
             'checkuser_id'          =>  $mat_checkuser_id[1],
             'color-nonce'           =>  $mat_color_nonce[1],
             'admin_color'           =>  'fresh',
-            'admin_bar_front'       =>  '0',//在浏览站点时显示工具栏;1是 0否
+            'admin_bar_front'       =>  '0',//在浏览站点时显示工具栏;1是
             'locale'                =>  'zh_CN',
             'first_name'            =>  '',
             'last_name'             =>  '',
@@ -1598,14 +1608,16 @@ class BtApi{
     
     private $bt_panel;
     private $bt_key;
+    private $cookie_file;
 
     public function __construct($bt_panel, $bt_key) {
       $this->bt_panel=$bt_panel;
       $this->bt_key=$bt_key;
+      $this->cookie_file = __DIR__ .'/'. md5($this->bt_panel) .'.cookie';
     }
 
     public function __destruct() {
-        @unlink(__DIR__.'/'.md5($this->bt_panel).'.cookie');
+        @unlink($this->cookie_file);
     }
 
     public function setvar(array $var){
@@ -1613,6 +1625,16 @@ class BtApi{
           $this->$key=$val;
         }
         return $this;
+    }
+
+    //获取面板日志 测试
+    public function getLogs(){
+        $url=$this->bt_panel.'/data?action=getData';
+        $p_data=$this->GetKeyData();
+        $p_data['tojs']='test';
+        $p_data['table']='logs';
+        $p_data['limit']='10';
+        return $this->HttpPostCookie($url,$p_data);
     }
 
     //添加网站
@@ -1700,9 +1722,8 @@ class BtApi{
 
     //请求面板
     private function HttpPostCookie($url, $data,$timeout=12){
-        $cookie_file=__DIR__.'/'.md5($this->bt_panel).'.cookie';
-        if(!file_exists($cookie_file)){
-            $fp=fopen($cookie_file,'w+');
+        if(!file_exists($this->cookie_file)){
+            $fp=fopen($this->cookie_file,'w+');
             fclose($fp);
         }
         $ch=curl_init();
@@ -1710,8 +1731,8 @@ class BtApi{
         curl_setopt($ch, CURLOPT_TIMEOUT, $timeout);
         curl_setopt($ch, CURLOPT_POST, true);
         curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
-        curl_setopt($ch, CURLOPT_COOKIEJAR, $cookie_file);
-        curl_setopt($ch, CURLOPT_COOKIEFILE, $cookie_file);
+        curl_setopt($ch, CURLOPT_COOKIEJAR, $this->cookie_file);
+        curl_setopt($ch, CURLOPT_COOKIEFILE, $this->cookie_file);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_HEADER, false);
         curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);

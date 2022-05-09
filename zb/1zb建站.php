@@ -1,22 +1,25 @@
 <?php
-/*创建zblog站点
-文件放在服务器上运行
-日期22.04.26
+/**
+ * 创建zblog站点
+ * 文件放在服务器上运行
+ * 日期22.05.09
 php /www/1111/1zb建站.php
 
 
 */
 
 
-
-//---------------------------设置开始---------------------------------
+//------------------------------------------------
+//-------------------设置开始---------------------
+//更新本文件;1开启
+$cof_update='0';
 
 //宝塔面板地址
-$cof_panel='http://202.165.121.194:8888/';
+$cof_panel='http://111.165.121.111:8888/';
 //宝塔API接口密钥  添加IP白名单到API接口
-$cof_key='1LkO65P8UKjQ3mrFF6ia5Z7V4bCIdaP0';
-//php版本(例7.2版本 写72)(推荐php7.2以上版本)
-$cof_php_v=72;
+$cof_key='11111111111111111111';
+//php版本(推荐php7.2以上版本)
+$cof_php_v='7.2';
 
 
 //zb网站后台账号
@@ -24,31 +27,15 @@ $cof_username='admin1234';
 //zb网站后台密码 (8位或更长的数字或字母组合)
 $cof_password='Qq12345678';
 //zb网站添加友情链接的数量;0不添加，4代表添加4个;
-$cof_link='6';
+$cof_link='0';
 
 
-//设置建站域名的文件 (内容格式:域名****网站标题****网站关键词****网站描述****网站版权说明)
+//设置建站域名的文件， (内容格式:域名****网站标题****网站关键词****网站描述****网站版权说明)
 $cof_site_file='site.txt';
-//---------------------------设置结束---------------------------------
-
-
-
-
-
-
-
-
-
-
-//--------------------------------------------------
-//--------------------------------------------------
-////zblog压缩包路径，或者下载链接
-$cof_zblink='https://raw.githubusercontent.com/mibao2022/qazxsw2022/main/zb/Z-BlogPHP_1_7_2_3045_Tenet.zip';
-
-//zblog网站副标题
-$cof_blog_subname='';
-//网站目录
-$wwwroot='/www/wwwroot/';
+//------------------设置结束----------------------
+//------------------------------------------------
+//------------------------------------------------
+//------------------------------------------------
 //网站伪静态
 $cof_rewrite='if (-f $request_filename/index.html){
  rewrite (.*) $1/index.html break;
@@ -59,77 +46,69 @@ if (-f $request_filename/index.php){
 if (!-f $request_filename){
  rewrite (.*) /index.php;
 }';
-//更新本文件;1开启
-$cof_update='0';
-//--------------------------------------------
-//--------------------------------------------
-//---------------代码开始---------------------
-//--------------------------------------------
-//--------------------------------------------
-$cof_panel=rtrim($cof_panel,'/');
-$cof_key=trim($cof_key);
-if(!preg_match('/[0-9a-zA-Z]{32}/',$cof_key)){
-    exit('设置正确的宝塔API接口密钥');
-}
+//zblog压缩包路径，或者下载链接
+$cof_zblink='https://raw.githubusercontent.com/mibao2022/qazxsw2022/main/zb/Z-BlogPHP_1_7_2_3045_Tenet.zip';
+//网站目录
+$wwwroot='/www/wwwroot/';
+//------------------------------------------------
+//------------------------------------------------
+//---------------代码开始-------------------------
+//------------------------------------------------
+//------------------------------------------------
 
-set_time_limit(0);
-$bt=new BtApi($cof_panel,$cof_key);
 $zblog=new ZBlog();
-if($cof_update){$zblog->upzb();}
+if($cof_update) $zblog->upzb();
 
-$cof_php_v=intval($cof_php_v);
-$cof_username=trim($cof_username);
-$cof_password=trim($cof_password);
-$cof_site_file=trim($cof_site_file);
-$cof_blog_subname=trim($cof_blog_subname);
-$cof_link=intval(trim($cof_link));
-if($cof_site_file[0] != '/'){
-    $cof_site_file=__DIR__.'/'.$cof_site_file;
-}
-if(!is_readable($cof_site_file)){
-    exit('设置建站域名的文件');
-}
-if(!$cof_php_v || $cof_php_v<54){
-    exit('填写正确的php版本');
-}
-if(!$cof_username){
-    exit('后台账户为空');
-}
-if(!$cof_password || strlen($cof_password)<8){
-    exit('后台密码长度小于8位数');
-}
 if(!is_dir('/www/server')){
     exit('文件需要放到服务器上运行');
 }
-if(!$cof_zblink){
-    exit('设置zblog压缩包路径');
+
+$cof_panel=rtrim($cof_panel,'/');
+$cof_key=trim($cof_key);
+if(!preg_match('/[0-9a-zA-Z]{32}/',$cof_key)){
+    exit("设置正确的宝塔API接口密钥\n");
 }
+
+$cof_php_v=intval(str_replace('.','',$cof_php_v));
+if(!$cof_php_v || $cof_php_v<70) exit("php版本大于7.0\n");
+
+$cof_username=trim($cof_username);
+if(!$cof_username) exit("后台账户为空\n");
+
+$cof_password=trim($cof_password);
+if(!$cof_password || strlen($cof_password)<8)exit("后台密码长度小于8位数\n");
+
+$cof_site_file=trim($cof_site_file);
+if($cof_site_file[0] != '/'){
+    $cof_site_file=__DIR__ .'/'.$cof_site_file;
+}
+if(!is_readable($cof_site_file)) exit("设置建站域名的文件\n");
+    
+if(!$cof_zblink) exit("设置zblog压缩包路径\n");
+
+$cof_link=intval(trim($cof_link));
+
 
 //读取域名
 $site_str=file_get_contents($cof_site_file);
 $site_arr=explode("\n", trim($site_str));
 $site_arr=array_values(array_filter(array_map('trim',$site_arr)));
-if(empty($site_arr)){
-	exit('设置建站域名');
-}
+if(empty($site_arr)) exit("设置建站域名\n");
 
-if($cof_blog_subname){
-    $zblog->cof_blog_subname=$cof_blog_subname;
-}
+
 if($cof_zblink[0] == '/' && is_file($cof_zblink)){
     $zblog_zipfile=$cof_zblink;
 }else{
     $zblog_zipfile=$zblog->down_zblog($cof_zblink);
 }
 $map_zipfile=$zblog->down_mapzip();
+$bt=new BtApi($cof_panel,$cof_key);
 $bt->SetFileAccess($zblog_zipfile);
 $bt->SetFileAccess($map_zipfile);
 $zblog_zipfile_fix= (substr($zblog_zipfile,-7)=='.tar.gz')?'tar':'zip';
 $map_zipfile_fix= (substr($map_zipfile,-7)=='.tar.gz')?'tar':'zip';
 
-
-
-
+set_time_limit(0);
 foreach($site_arr as $key=>$val){
     $zblog->set_tdk($val);
     $site=$zblog->site;
@@ -143,7 +122,7 @@ foreach($site_arr as $key=>$val){
     //创建站点
     echo sprintf("\n------搭建第%s个站点:%s------\n",$key+1,$site);
     $response=$bt->AddSite($site, $rpath, $cof_php_v, false);
-    if(strpos($response,'"siteStatus": true') === false || empty($response) ){
+    if(strpos($response,'"siteStatus": true') === false || !$response ){
         $zblog->file_record(sprintf("站点创建失败\n%s\n",$response));
         sleep(2);
         continue;
@@ -181,10 +160,6 @@ foreach($site_arr as $key=>$val){
     //删除其他未启用主题
     $zblog->del_othertheme();
     
-    //添加友情链接代码到模板中
-    $zblog->file_addlink();
-    
-    
     //解压地图插件 (改btapi解压)
     $bt->UnZip($map_zipfile,$rpath.'/zb_users/plugin',$map_zipfile_fix);
     
@@ -197,7 +172,6 @@ foreach($site_arr as $key=>$val){
 }
 
 echo "\n完成\n";
-
 
 
 
@@ -227,7 +201,7 @@ class ZBlog{
     public $csrftoken;//登录时获取 全站csrf是统一的
 
     public function __construct() {
-        // $this->upzb();
+        
     }
 
     //设置变量
@@ -240,7 +214,7 @@ class ZBlog{
 
     //网站设置
     public function setting(){
-        global $map_zipfile,$site_arr,$cof_link;
+        global $site_arr,$cof_link;
         //网站设置
         $this->setting_mng();
         
@@ -268,6 +242,7 @@ class ZBlog{
         
         //添加友链
         if($cof_link){
+            $this->file_addlink();//添加友情链接代码到模板中
             $this->add_flink($site_arr,$cof_link);
         }
         
@@ -452,11 +427,6 @@ class ZBlog{
         return true;
     }
 
-
-
-
-
-
     //添加分类
     public function set_category_func($name){
         $p_url=$this->host.'zb_system/cmd.php?act=CategoryPst&csrfToken='.$this->csrftoken;
@@ -560,28 +530,21 @@ class ZBlog{
         return $this;
     }
 
-    //设置静态化页面插件
+    //设置静态化页面插件  有毛病，需要登录一下后台，栏目的伪静态才生效
     public function plugin_rew_edit(){
         $plugin_id='STACentre';
         $plugin_name='静态化页面';
         $p_data=[
-            'csrfToken'              =>  $this->csrftoken,
-            'reset'                  =>  '',
-            'ZC_STATIC_MODE'         =>  'REWRITE',
-            'ZC_ARTICLE_REGEX'       =>  '{%host%}post/{%id%}.html',
-            'radioZC_ARTICLE_REGEX'  =>  '{%host%}post/{%id%}.html',
-            'ZC_PAGE_REGEX'          =>  '{%host%}{%id%}.html',
-            'radioZC_PAGE_REGEX'     =>  '{%host%}{%id%}.html',
-            'ZC_INDEX_REGEX'         =>  '{%host%}page_{%page%}.html',
-            'radioZC_INDEX_REGEX'    =>  '{%host%}page_{%page%}.html',
-            'ZC_CATEGORY_REGEX'      =>  '{%host%}category-{%id%}_{%page%}.html',
-            'radioZC_CATEGORY_REGEX' =>  '{%host%}category-{%id%}_{%page%}.html',
-            'ZC_TAGS_REGEX'          =>  '{%host%}tags-{%id%}_{%page%}.html',
-            'radioZC_TAGS_REGEX'     =>  '{%host%}tags-{%id%}_{%page%}.html',
-            'ZC_DATE_REGEX'          =>  '{%host%}date-{%date%}_{%page%}.html',
-            'radioZC_DATE_REGEX'     =>  '{%host%}date-{%date%}_{%page%}.html',
-            'ZC_AUTHOR_REGEX'        =>  '{%host%}author-{%id%}_{%page%}.html',
-            'radioZC_AUTHOR_REGEX'   =>  '{%host%}author-{%id%}_{%page%}.html',
+            'csrfToken'             =>  $this->csrftoken,
+            'reset'                 =>  '',
+            'ZC_STATIC_MODE'        =>  'REWRITE',
+            'ZC_ARTICLE_REGEX'      => '{%host%}post/{%id%}.html',
+            'ZC_PAGE_REGEX'         => '{%host%}{%id%}.html',
+            'ZC_INDEX_REGEX'        => '{%host%}page_{%page%}.html',
+            'ZC_CATEGORY_REGEX'     => '{%host%}category-{%id%}_{%page%}.html',
+            'ZC_TAGS_REGEX'         => '{%host%}tags-{%id%}_{%page%}.html',
+            'ZC_DATE_REGEX'         => '{%host%}date-{%date%}_{%page%}.html',
+            'ZC_AUTHOR_REGEX'       => '{%host%}author-{%id%}_{%page%}.html',
         ];
         $p_url=sprintf('%szb_users/plugin/%s/main.php',$this->host,$plugin_id);
         for ($i = 0; $i < 10; $i++) {
@@ -732,7 +695,7 @@ class ZBlog{
     public function clearcacahe(){
         $p_url=$this->host.'zb_system/cmd.php?act=misc&type=statistic&forced=1&csrfToken='.$this->csrftoken;
         $this->curl_get($p_url,$thso->cookie);
-        
+        $this->curl_get($this->host.'zb_system/admin/index.php?act=admin',$this->cookie);
     }
     
     //添加友情链接;href,title,text,target,sub,ico
@@ -944,20 +907,7 @@ class ZBlog{
     </p>
 </div>
 ';
-        $str=@file_get_contents($sfile);
-        if(!$str){return false;}
-        //删除外链
-        $new_str=str_replace('<h4>Powered By {$zblogphpabbrhtml}. Theme by <a href="https://www.toyean.com/" target="_blank">TOYEAN</a>.</h4>','',$str);
-        $new_str=preg_replace('/[\'"](https?:\/\/.*?)[\'"]/','/',$new_str);
-        if(strpos($new_str,'{module:link}')===false){
-            $new_str=$addstr.$new_str;
-        }
-        if(file_put_contents($sfile,$new_str)){
-            return true;
-        }else{
-            return false;
-        }
-         
+        return @file_get_contents($sfile);
     }
 
 
@@ -1031,7 +981,7 @@ class ZBlog{
     }
 
     //get
-    public function curl_get($url, $header=array(), $time=12){
+    public function curl_get($url, $header=array()){
         if(!is_array($header)){
             $header=[$header];
         }
@@ -1040,7 +990,7 @@ class ZBlog{
         curl_setopt($ch, CURLOPT_URL, $url);
         curl_setopt($ch, CURLOPT_HEADER, false);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_TIMEOUT, $time);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 12);
         curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false); 
         curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false); 
         curl_setopt($ch, CURLOPT_FOLLOWLOCATION,true);
@@ -1051,8 +1001,7 @@ class ZBlog{
     }
 
     //post
-    public function curl_post($url, array $post_data=array(), $header=array(), $time=12){
-        $post_data=http_build_query($post_data, '', '&');
+    public function curl_post($url, array $post_data=array(), $header=array()){
         if(!is_array($header)){
             $header=[$header];
         }
@@ -1061,9 +1010,9 @@ class ZBlog{
         curl_setopt($ch, CURLOPT_URL, $url);
         curl_setopt($ch, CURLOPT_HEADER, false);
         curl_setopt($ch, CURLOPT_POST, true);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, $post_data);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($post_data, '', '&'));
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);   
-        curl_setopt($ch, CURLOPT_TIMEOUT, $time);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 12);
         curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
         curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
         curl_setopt($ch, CURLOPT_FOLLOWLOCATION,true);
@@ -1089,6 +1038,7 @@ class ZBlog{
         $this->zc_blog_keywords=(isset($arr[2]) && $arr[2])?$arr[2]:'';
         $this->zc_blog_description=(isset($arr[3]) && $arr[3])?$arr[3]:'';
         $this->zc_blog_copyright=(isset($arr[4]) && $arr[4])?$arr[4]:'';
+        $this->zc_blog_subname='';//副标题
         return $this;
     }
 
@@ -1110,6 +1060,43 @@ class ZBlog{
         return false;
     }
 
+    // /* php解压文件
+    // *$sfile 压缩包文件
+    // *$dpath 解压后路径
+    // */
+    // public function unzip_file($sfile,$dpath){
+    //     //使用宝塔api解压，得到www权限文件
+    //     if(substr($sfile,-7)=='.tar.gz'){
+    //         $phar = new PharData($sfile);
+    //         $phar->extractTo($dpath, null, true);
+    //         // $this->recurse_chown_chgrp($dpath);//修改用户组
+    //     }elseif(substr($sfile,-4)=='.zip'){
+    //         $zip = new ZipArchive();
+    //         $zip->open($sfile);
+    //         $zip->extractTo($dpath);
+    //         $zip->close();
+    //         // $this->recurse_chown_chgrp($dpath);//修改用户组
+    //     }else{
+    //         //rar文件,使用btapi解压
+    //         exit('不支持的压缩包文件后缀：'.basename($sfile));
+    //     }
+    //     return true;
+    // }
+    // //修改用户组
+    // function recurse_chown_chgrp($mypath, $uid='www', $gid='www'){
+    //     $d = opendir ($mypath) ;
+    //     while(($file = readdir($d)) !== false) {
+    //         if ($file != "." && $file != ".." && $file != ".user.ini") {
+    //             $typepath = $mypath . "/" . $file ;
+    //             if (filetype ($typepath) == 'dir') {
+    //                 $this->recurse_chown_chgrp ($typepath, $uid, $gid);
+    //             }
+    //             chown($typepath, $uid);
+    //             chgrp($typepath, $gid);
+    //         }
+    //     }
+    // }
+
     //下载文件
     public function down_file($d_link,$sfile){
         $ch = curl_init($d_link);
@@ -1119,7 +1106,6 @@ class ZBlog{
         $fh = fopen($sfile, 'w');
         fwrite($fh, $output);
         fclose($fh);
-        // chown($sfile,'www');
         return true;
     }
 
@@ -1134,7 +1120,7 @@ class ZBlog{
         }
         return $sfile;
     }
-    
+
     //下载zblog程序压缩包
     public function down_zblog($cof_zblink){
         $name=basename($cof_zblink);
@@ -1149,23 +1135,31 @@ class ZBlog{
 }
 
 
-
-
 //宝塔api
 class BtApi{
-    
     private $bt_panel;
     private $bt_key;
 
-    public function __construct($bt_panel, $bt_key) {
-      $this->bt_panel=$bt_panel;
-      $this->bt_key=$bt_key;
+    public function __construct($bt_panel, $bt_key){
+        $this->bt_panel=$bt_panel;
+        $this->bt_key=$bt_key;
+        //测试宝塔连接
+        $response=$this->getLogs();
+        if(!$response) exit("宝塔api连接失败\n");
+        if(strpos($response,'status": false')) exit($response);
     }
-
     public function __destruct() {
-        @unlink(__DIR__.'/'.md5($this->bt_panel).'.cookie');
+        
     }
-
+    //获取面板日志 测试
+    public function getLogs(){
+        $url=$this->bt_panel.'/data?action=getData';
+        $p_data=$this->GetKeyData();
+        $p_data['tojs']='test';
+        $p_data['table']='logs';
+        $p_data['limit']='10';
+        return $this->HttpPostCookie($url,$p_data);
+    }
     public function setvar(array $var){
         foreach($var as $key=>$val){
           $this->$key=$val;
@@ -1257,23 +1251,14 @@ class BtApi{
     }
 
     //请求面板
-    private function HttpPostCookie($url, $data,$timeout=12){
-        $cookie_file=__DIR__.'/'.md5($this->bt_panel).'.cookie';
-        if(!file_exists($cookie_file)){
-            $fp=fopen($cookie_file,'w+');
-            fclose($fp);
-        }
+    private function HttpPostCookie($url, $data){
         $ch=curl_init();
         curl_setopt($ch, CURLOPT_URL, $url);
-        curl_setopt($ch, CURLOPT_TIMEOUT, $timeout);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 10);
         curl_setopt($ch, CURLOPT_POST, true);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
-        curl_setopt($ch, CURLOPT_COOKIEJAR, $cookie_file);
-        curl_setopt($ch, CURLOPT_COOKIEFILE, $cookie_file);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($data, '', '&'));
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_HEADER, false);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
         $response=curl_exec($ch);
         curl_close($ch);
         return $response;

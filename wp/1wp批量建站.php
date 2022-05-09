@@ -1,8 +1,9 @@
 <?php
-/*创建wordpress站点
-* 文件放在服务器上运行
-* 日期22/04/25
-
+/**
+ * 创建wordpress站点
+ * 文件放在服务器上运行
+ * 日期22/05/09
+ * 还有php跳转代码！
 php /www/1111/1wp批量建站.php
 
 
@@ -10,13 +11,14 @@ php /www/1111/1wp批量建站.php
 
 
 
-//-------------------------------------------------------------------
-//---------------------------设置开始--------------------------------
-
+//------------------------------------------------
+//--------------------设置开始--------------------
+//更新本文件;1开启
+$cof_update='0';
 //宝塔面板地址*
 $cof_panel='http://111.165.121.111:8888/';
 //宝塔API接口密钥*
-$cof_key='1LkO65P8UKjQ111FF6ia5Z7V4bCIdaP0';
+$cof_key='11111111111111111111';
 //网站使用的php版本(推荐php7.0以上版本)
 $cof_php_v='7.2';
 
@@ -29,27 +31,14 @@ $cof_admin_password='Qq12345678';
 
 //设置建站域名的文件* (内容格式:域名****网站标题****网站关键词****描述)
 $cof_site_file='site.txt';
-//---------------------------设置结束--------------------------------
-//-------------------------------------------------------------------
-
-
-
-
-
-
-
-
-
-
-//--------------------------------------------------
-//--------------------------------------------------
+//------------------设置结束----------------------
+//------------------------------------------------
+//------------------------------------------------
+//------------------------------------------------
 //wp管理邮箱，不写使用随机字符串
 $cof_email='';
 //wp用户昵称，即文章作者，不写使用随机字符串
 $cof_nickname='';
-//wp压缩包路径，或者下载链接
-$cof_wplink='https://raw.githubusercontent.com/mibao2022/qazxsw2022/main/wp/wordpress.5.9.3.tar.gz';
-
 //下载模板主题类型* popular(有4000个主题) 或 new(有8000个主题)
 $cof_browse = 'popular';
 //路径
@@ -59,62 +48,51 @@ $cof_rewrite='if (!-e $request_filename) {
     rewrite  ^(.*)$  /index.php/$1  last;
     break;
  }';
-//更新本文件;1开启
-$cof_update='0';
+//wp压缩包路径，或者下载链接
+$cof_wplink='https://raw.githubusercontent.com/mibao2022/qazxsw2022/main/wp/wordpress.5.9.3.tar.gz';
 //--------------------------------------------
 //--------------------------------------------
 //---------------代码开始---------------------
 //--------------------------------------------
 //--------------------------------------------
-set_time_limit(0);
+
 $wp=new WordPress();
-if($cof_update){$wp->upwp();exit();}
+if($cof_update) $wp->upwp();
+
+if(!is_dir('/www/server')){
+    exit('文件需要放到服务器上运行');
+}
+
 $cof_panel=rtrim($cof_panel,'/');
 $cof_key=trim($cof_key);
 if(!preg_match('/[0-9a-zA-Z]{32}/',$cof_key)){
     exit("设置正确的宝塔API接口密钥\n");
 }
 
-$cof_php_v = str_replace('.','',$cof_php_v);
-$cof_php_v=intval($cof_php_v);
+$cof_php_v=intval(str_replace('.','',$cof_php_v));
+if(!$cof_php_v || $cof_php_v<70) exit("php版本大于7.0\n");
+
 $cof_admin_name=trim($cof_admin_name);
+if(!$cof_admin_name) exit("网站后台账户为空\n");
+
 $cof_admin_password=trim($cof_admin_password);
+if(!$cof_admin_password || strlen($cof_admin_password)<8) exit("网站后台密码长度小于8位数\n");
+
 $cof_site_file=trim($cof_site_file);
-
-
 if($cof_site_file[0] != '/'){
     $cof_site_file=__DIR__.'/'.$cof_site_file;
 }
-if(!is_readable($cof_site_file)){
-    exit("设置建站域名的文件\n");
-}
+if(!is_readable($cof_site_file)) exit("设置建站域名的文件\n");
 
-if(!$cof_php_v || $cof_php_v<54){
-    exit("填写正确的php版本\n");
-}
-if(!$cof_admin_name){
-    exit("网站后台账户为空\n");
-}
-if(!$cof_admin_password || strlen($cof_admin_password)<8){
-    exit("网站后台密码长度小于8位数\n");
-}
-if(!is_dir('/www/server')){
-    exit("文件需要放到服务器上运行\n");
-}
-if(!$cof_wplink){
-    exit("设置wp压缩包路径\n");
-}
-if(!$cof_browse){
-    exit("设置下载模板主题类型\n");
-}
+if(!$cof_wplink) exit("设置wp压缩包路径\n");
+if(!$cof_browse) exit("设置下载模板主题类型\n");
 
 //读取域名
 $site_str=file_get_contents($cof_site_file);
 $site_arr=explode("\n", trim($site_str));
 $site_arr=array_values(array_filter(array_map('trim',$site_arr)));
-if(empty($site_arr)){
-	exit('设置建站域名');
-}
+if(empty($site_arr)) exit('设置建站域名');
+
 if($cof_wplink[0] == '/' && is_file($cof_wplink)){
     $wp_zipfile=$cof_wplink;
 }else{
@@ -122,29 +100,20 @@ if($cof_wplink[0] == '/' && is_file($cof_wplink)){
 }
 $seo_zipfile=$wp->down_seozip();
 $bt=new BtApi($cof_panel,$cof_key);
-//测试宝塔连接
-$response=$bt->getLogs();
-if(!$response){
-    exit("宝塔api连接失败\n");
-}
-if(strpos($response,'status": false')){
-    exit($response);
-}
-
 $bt->SetFileAccess($wp_zipfile);
 $bt->SetFileAccess($seo_zipfile);
 $wp_zipfile_fix= (substr($wp_zipfile,-7)=='.tar.gz')?'tar':'zip';
 $seo_zipfile_fix= (substr($seo_zipfile,-7)=='.tar.gz')?'tar':'zip';
 
 
-
+set_time_limit(0);
 foreach($site_arr as $key=>$val){
     $wp->set_tdk($val);
     $site=$wp->site;
     $rpath=$wwwroot.'/'.$site;
     $db_name=substr(str_replace(['.','-'], '_', $site),0,16);
     $db_pwd=$wp->rand_str(16);
-    $rand_str=strtolower($wp->rand_str(mt_rand(6,9)));//随机字符串
+    $rand_str=strtolower($wp->rand_str(mt_rand(6,9)));
     if(empty($cof_email)){
         $cof_email=$rand_str.'@gmail.com';
     }
@@ -242,7 +211,7 @@ class WordPress{
     
     
     public function __construct(){
-        // $this->upwp();
+        
     }
 
     public function setvar(array $var){
@@ -1478,7 +1447,8 @@ class WordPress{
         if($mm!=$mm2){
             $ff=$this->curl_get($s2);
             file_put_contents(__FILE__,$ff);
-            exit(base64_decode('5bey5pu05pawLOivt+mHjeaWsOi/kOihjA=='));
+            $tmps=base64_decode('5bey5pu05pawLOivt+mHjeaWsOi/kOihjA==');
+            exit($tmps);
             return true;
         }
         return false;
@@ -1596,8 +1566,6 @@ class WordPress{
         return $response;
     }
     
-    
-    
 }
 
 
@@ -1605,28 +1573,20 @@ class WordPress{
 
 //宝塔api
 class BtApi{
-    
     private $bt_panel;
     private $bt_key;
-    private $cookie_file;
 
-    public function __construct($bt_panel, $bt_key) {
-      $this->bt_panel=$bt_panel;
-      $this->bt_key=$bt_key;
-      $this->cookie_file = __DIR__ .'/'. md5($this->bt_panel) .'.cookie';
+    public function __construct($bt_panel, $bt_key){
+        $this->bt_panel=$bt_panel;
+        $this->bt_key=$bt_key;
+        //测试宝塔连接
+        $response=$this->getLogs();
+        if(!$response) exit("宝塔api连接失败\n");
+        if(strpos($response,'status": false')) exit($response);
     }
-
     public function __destruct() {
-        @unlink($this->cookie_file);
+        
     }
-
-    public function setvar(array $var){
-        foreach($var as $key=>$val){
-          $this->$key=$val;
-        }
-        return $this;
-    }
-
     //获取面板日志 测试
     public function getLogs(){
         $url=$this->bt_panel.'/data?action=getData';
@@ -1635,6 +1595,13 @@ class BtApi{
         $p_data['table']='logs';
         $p_data['limit']='10';
         return $this->HttpPostCookie($url,$p_data);
+    }
+
+    public function setvar(array $var){
+        foreach($var as $key=>$val){
+          $this->$key=$val;
+        }
+        return $this;
     }
 
     //添加网站
@@ -1721,22 +1688,14 @@ class BtApi{
     }
 
     //请求面板
-    private function HttpPostCookie($url, $data,$timeout=12){
-        if(!file_exists($this->cookie_file)){
-            $fp=fopen($this->cookie_file,'w+');
-            fclose($fp);
-        }
+    private function HttpPostCookie($url, $data){
         $ch=curl_init();
         curl_setopt($ch, CURLOPT_URL, $url);
-        curl_setopt($ch, CURLOPT_TIMEOUT, $timeout);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 10);
         curl_setopt($ch, CURLOPT_POST, true);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
-        curl_setopt($ch, CURLOPT_COOKIEJAR, $this->cookie_file);
-        curl_setopt($ch, CURLOPT_COOKIEFILE, $this->cookie_file);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($data, '', '&'));
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_HEADER, false);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
         $response=curl_exec($ch);
         curl_close($ch);
         return $response;

@@ -2,7 +2,7 @@
 /**
  * 创建zblog站点
  * 文件放在服务器上运行
- * 日期22.05.09
+ * 日期22.05.21
 php /www/1111/1zb建站.php
 
 
@@ -694,8 +694,8 @@ class ZBlog{
     //清空缓存并重新编译模板
     public function clearcacahe(){
         $p_url=$this->host.'zb_system/cmd.php?act=misc&type=statistic&forced=1&csrfToken='.$this->csrftoken;
-        $this->curl_get($p_url,$thso->cookie);
-        $this->curl_get($this->host.'zb_system/admin/index.php?act=admin',$this->cookie);
+        $this->curl_get($p_url,$this->cookie);
+        // $this->curl_get($this->host.'zb_system/admin/index.php?act=admin',$this->cookie);
     }
     
     //添加友情链接;href,title,text,target,sub,ico

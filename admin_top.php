@@ -1,7 +1,12 @@
-<?php if (!defined('ZBP_PATH')) {
+<?php 
+
+
+if (!defined('ZBP_PATH')) {
     exit('Access denied');
 } ?>
 </head>
+
+
 <body class="admin admin-<?php echo $action; ?>">
 <header class="header">
     <div class="logo"><?php if(CheckIsMobile()) { ?><a href="<?php echo $zbp->cmdurl . '?act=admin'; ?>" title="<?php ?>"><?php } else {?><a href="<?php echo $bloghost; ?>" title="<?php echo htmlspecialchars($blogname); ?>" target="_blank"><?php }?><img src="<?php echo $bloghost; ?>zb_system/image/admin/none.gif" alt="Z-Blog"/></a></div>

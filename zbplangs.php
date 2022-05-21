@@ -45,7 +45,7 @@ class ZbpLangs implements IteratorAggregate
         return array_key_exists($name, $this->array);
     }
 
-    #[\ReturnTypeWillChange]
+
     public function getIterator() {
         $newarray = array();
         foreach ($this->array as $key => $value) {

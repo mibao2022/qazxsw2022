@@ -1,6 +1,9 @@
-<?php if (!defined('ZBP_PATH')) {
+<?php 
+if (!defined('ZBP_PATH')) {
     exit('Access denied');
 }
+
+
 if ($zbp->option['ZC_ADDITIONAL_SECURITY']) {
     header('X-Frame-Options: DENY');
     header('X-XSS-Protection: 1; mode=block');
@@ -27,7 +30,7 @@ if ($zbp->option['ZC_ADDITIONAL_SECURITY']) {
 <script src="<?php echo $bloghost; ?>zb_system/script/jquery-2.2.4.min.js?v=<?php echo $blogversion; ?>"></script>
 <script src="<?php echo $bloghost; ?>zb_system/script/zblogphp.js?v=<?php echo $blogversion; ?>"></script>
 <script src="<?php echo $bloghost; ?>zb_system/script/c_admin_js_add.php?hash=<?php echo $zbp->admin_js_hash; ?>&v=<?php echo $blogversion; ?>"></script>
-<script src="<?php echo $bloghost; ?>zb_system/script/jquery-ui.custom.min.js?v=<?php echo $blogversion; ?>"></script>
+<script src="<?php echo  $bloghost; ?>zb_system/script/jquery-ui.custom.min.js?v=<?php echo $blogversion; ?>"></script>
 <script>if (!window.bloghost && window.confirm("<?php echo $lang['msg']['error_load_js']; ?>")) window.open('<?php echo str_replace('{%message%}', '', str_replace('{%id%}', 89, $lang['offical_urls']['more_help'])); ?>');</script>
 <?php
 foreach ($GLOBALS['hooks']['Filter_Plugin_Admin_Header'] as $fpname => &$fpsignal) {

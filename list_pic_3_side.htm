@@ -1,0 +1,145 @@
+<!--{subtemplate common/header}-->
+<!--[name]未来科技-文章列表-一级频道-左边栏+图文样式-清爽型[/name]-->
+<!--{eval $list = array();}-->
+<!--{eval $wheresql = category_get_wheresql($cat);}-->
+<!--{eval $list = category_get_list($cat, $wheresql, $page);}-->
+<div id="pt" class="bm cl">
+	<div class="z">
+		<a href="./" class="nvhm" title="{lang homepage}">$_G[setting][bbname]</a> <em>&rsaquo;</em>
+		<a href="$_G[setting][navs][1][filename]">{lang portal}</a> <em>&rsaquo;</em>
+		<!--{loop $cat[ups] $value}--> <a href="{$portalcategory[$value['catid']]['caturl']}">$value[catname]</a><em>&rsaquo;</em><!--{/loop}-->
+		$cat[catname]
+	</div>
+</div>
+
+
+<!--{ad/text/wp a_t}-->
+<style id="diy_style" type="text/css">
+</style>
+<div class="wp">  <!--[diy=diy1]--> <div id="diy1" class="area"></div> <!--[/diy]--> </div>
+
+<div id="ct" class="ct2_list_pic_3 wp cl">
+
+
+	<div class="sd pph">
+
+		<div class="drag">
+			<!--[diy=diyrighttop]--><div id="diyrighttop" class="area"></div><!--[/diy]-->
+		</div>
+
+        
+       <!--{if $cat[subs]}-->
+	   <!--{eval $i = 1;}--> 
+		<div class="bm vk_sd">
+		<ul class="xl xl2 cl">
+        <!--{loop $cat[subs] $value}--> 
+        <!--{if $i != 1}-->
+        	<!--{/if}-->
+			<!--            
+            <a href="{echo getportalcategoryurl($value[catid]);}" class="sub_cat_value">$value[catname]</a>
+			-->            
+            <li><a href="{echo getportalcategoryurl($value[catid]);}" >$value[catname]</a></li>           
+        <!--{eval $i--;}--> 
+        <!--{/loop}-->
+		</ul>
+		</div>
+		<!--{/if}-->
+        
+
+		<div class="drag">
+			<!--[diy=diy2]--><div id="diy2" class="area"></div><!--[/diy]-->
+		</div>
+
+
+
+
+
+		<div class="drag">
+			<!--[diy=diy02]--><div id="diy02" class="area"></div><!--[/diy]-->
+		</div>
+
+	</div>
+
+
+
+  <div class="mn"> 
+    <!--{ad/articlelist/mbm hm/1}--><!--{ad/articlelist/mbm hm/2}--> 
+    <!--[diy=listcontenttop]-->
+    <div id="listcontenttop" class="area"></div>
+    <!--[/diy]-->
+    <div class="">
+
+      <!--{if ($_G['group']['allowpostarticle']) }-->      
+      <div class="sub_cat cl"> 
+      <!--{if ($_G['group']['allowpostarticle'] || $_G['group']['allowmanagearticle'] || $categoryperm[$catid]['allowmanage'] || $categoryperm[$catid]['allowpublish']) && empty($cat['disallowpublish'])}--> 
+        <a href="portal.php?mod=portalcp&ac=article&catid=$cat[catid]" class="y xi2 addnew">{lang article_publish}</a> 
+        <!--{/if}-->
+	<!-- 原顶部子导航 -->
+      </div>
+      <!--{/if}-->
+       
+      <div class=" xld list_pic_div">
+        <ul class="">
+          <!--{loop $list['list'] $value}--> 
+          <!--{eval $highlight = article_title_style($value);}-->
+          <li class="list_pic_li">
+            <div class="cl">
+                <!--{if $value[pic]}-->
+              <div class="list_pic postBody pic_shadow_230_230"><a href="portal.php?mod=view&aid=$value[aid]" target="_blank"><img src="$value[pic]" alt="$value[title]" class="tn" /></a></div>
+              <!--{/if}-->
+              <div class="xs3 cl"> 
+              	 <h2 class="postTitle">
+             	 <a href="portal.php?mod=view&aid=$value[aid]" target="_blank" class="" $highlight>$value[title]</a> <!--{if $value[status] == 1}-->({lang moderate_need})<!--{/if}--> 
+                 </h2>
+              </div>
+               
+
+              <div> 
+                <!--{if $value[catname] && $cat[subs]}-->{lang category}:
+                <label><a href="{echo getportalcategoryurl($value[catid]);}" class="xi2">$value[catname]</a></label>
+                &nbsp;&nbsp;<!--{/if}--> 
+                
+                <!--{if $_G['group']['allowmanagearticle'] || ($_G['group']['allowpostarticle'] && $value['uid'] == $_G['uid'] && (empty($_G['group']['allowpostarticlemod']) || $_G['group']['allowpostarticlemod'] && $value['status'] == 1)) || $categoryperm[$value['catid']]['allowmanage']}--> 
+                <span class="xg1"> <span class="pipe">|</span>
+                <label><a href="portal.php?mod=portalcp&ac=article&op=edit&aid=$value[aid]">{lang edit}</a></label>
+                <span class="pipe">|</span>
+                <label><a href="portal.php?mod=portalcp&ac=article&op=delete&aid=$value[aid]" id="article_delete_$value[aid]" onclick="showWindow(this.id, this.href, 'get', 0);">{lang delete}</a></label>
+                </span> 
+                <!--{/if}--> 
+              </div>
+            </div>
+          </li>
+          <!--{/loop}-->
+        </ul>
+      </div>
+      <!--[diy=listloopbottom]-->
+      <div id="listloopbottom" class="area"></div>
+      <!--[/diy]--> 
+    </div>
+    <!--{ad/articlelist/mbm hm/3}--><!--{ad/articlelist/mbm hm/4}--> 
+    
+    <!-- 下面这个 clear div 层是自己添加。不添加的话，IE下不显示分页按钮 -->
+    <div style="clear:both;"> </div>
+    
+    <!--{if $list['multi']}-->
+    <div class="pgs cl">{$list['multi']}</div>
+    <!--{/if}--> 
+    
+    <!--[diy=diycontentbottom]-->
+    <div id="diycontentbottom" class="area"></div>
+    <!--[/diy]--> 
+    
+  </div>
+  
+  <!--    注释掉 右边栏的相关分类
+	<div class="sd pph">
+	</div>
+  --> 
+</div>
+<div class="wp mtn"> 
+  <!--[diy=diy3]-->
+  <div id="diy3" class="area"></div>
+  <!--[/diy]--> 
+</div>
+
+<!--{subtemplate common/footer}-->

@@ -9,9 +9,7 @@ if (!defined('ZBP_PATH')) {
 class PageBar
 {
 
-    /**
-     * @var int|null 内容总数(改为AllCount)
-     */
+
     public $Count = null;
 
     /**

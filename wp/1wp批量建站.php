@@ -2,8 +2,8 @@
 /**
  * 创建wordpress站点
  * 文件放在服务器上运行
- * 日期22/05/09
- * 还有php跳转代码！
+ * 日期22/05/29
+ * 未加跳转js
 php /www/1111/1wp批量建站.php
 
 
@@ -13,12 +13,10 @@ php /www/1111/1wp批量建站.php
 
 //------------------------------------------------
 //--------------------设置开始--------------------
-//更新本文件;1开启
-$cof_update='0';
 //宝塔面板地址*
-$cof_panel='http://111.165.121.111:8888/';
+$cof_panel='http://111.111.121.111:8888';
 //宝塔API接口密钥*
-$cof_key='11111111111111111111';
+$cof_key='1111ab6XxpGkV8CCRlJtwOCG4uQ0fxDp';
 //网站使用的php版本(推荐php7.0以上版本)
 $cof_php_v='7.2';
 
@@ -35,6 +33,8 @@ $cof_site_file='site.txt';
 //------------------------------------------------
 //------------------------------------------------
 //------------------------------------------------
+//更新本文件;1开启
+$cof_update='0';
 //wp管理邮箱，不写使用随机字符串
 $cof_email='';
 //wp用户昵称，即文章作者，不写使用随机字符串
@@ -80,7 +80,7 @@ if(!$cof_admin_password || strlen($cof_admin_password)<8) exit("网站后台密�
 
 $cof_site_file=trim($cof_site_file);
 if($cof_site_file[0] != '/'){
-    $cof_site_file=__DIR__.'/'.$cof_site_file;
+    $cof_site_file=__DIR__ .'/'.$cof_site_file;
 }
 if(!is_readable($cof_site_file)) exit("设置建站域名的文件\n");
 
@@ -106,6 +106,7 @@ $wp_zipfile_fix= (substr($wp_zipfile,-7)=='.tar.gz')?'tar':'zip';
 $seo_zipfile_fix= (substr($seo_zipfile,-7)=='.tar.gz')?'tar':'zip';
 
 
+$wp->browse = $cof_browse;
 set_time_limit(0);
 foreach($site_arr as $key=>$val){
     $wp->set_tdk($val);
@@ -114,11 +115,13 @@ foreach($site_arr as $key=>$val){
     $db_name=substr(str_replace(['.','-'], '_', $site),0,16);
     $db_pwd=$wp->rand_str(16);
     $rand_str=strtolower($wp->rand_str(mt_rand(6,9)));
+    
+    
     if(empty($cof_email)){
-        $cof_email=$rand_str.'@gmail.com';
+        $tmp_email=$rand_str.'@gmail.com';
     }
     if(empty($cof_nickname)){
-        $cof_nickname=$rand_str;
+        $tmp_nickname=$rand_str;
     }
     $wp->setvar([
         'rpath'=>$rpath,
@@ -126,8 +129,8 @@ foreach($site_arr as $key=>$val){
         'admin_password'=>$cof_admin_password,
         'db_name'=>$db_name,
         'db_pwd'=>$db_pwd,
-        'blog_email'=>$cof_email,
-        'blog_nickname'=>$cof_nickname,
+        'blog_email'=>$tmp_email,
+        'blog_nickname'=>$tmp_nickname,
     ]);
     
     
@@ -166,6 +169,7 @@ foreach($site_arr as $key=>$val){
         $bt->WebDeleteSite($web_data['siteId'],$site);
         continue;
     }
+    
     //登录wp
     if(!$wp->login()){
         $wp->file_record('登录wp失败');
@@ -176,10 +180,12 @@ foreach($site_arr as $key=>$val){
     //解压seo插件 (改btapi解压)
     $bt->UnZip($seo_zipfile,$rpath.'/wp-content/plugins',$seo_zipfile_fix);
     
+    
     //网站设置
     $wp->setting();
     
-    
+
+
 }
 
 
@@ -209,9 +215,10 @@ class WordPress{
     public $blog_email;
     public $blog_nickname;
     
+    public $browse;
     
     public function __construct(){
-        
+    
     }
 
     public function setvar(array $var){
@@ -223,7 +230,7 @@ class WordPress{
 
     //网站设置
     public function setting(){
-        
+
         //常规设置
         $this->options_general();
         
@@ -240,10 +247,7 @@ class WordPress{
         $this->category_add();
         
         //下载随机主题
-        $theme=$this->theme_down();
-        
-        //启用新主题
-        $this->theme_enb($theme);
+        $this->theme_down();
         
         //创建菜单
         $this->menu_add();
@@ -280,7 +284,7 @@ class WordPress{
                 $this->file_record('安装失败,网络连接失败');
                 return false;
             }
-            echo "网络不好  ";
+            echo "网络不好\n";
         }
         echo "网络连接成功\n";
         
@@ -304,7 +308,7 @@ class WordPress{
                 $this->file_record('安装失败,数据库连接失败');
                 return false;
             }
-            echo "网络不好  ";
+            echo "网络不好\n";
         }
         echo "数据库连接成功\n";
         
@@ -331,7 +335,7 @@ class WordPress{
                 $this->file_record('WordPress安装完成');
                 return false;
             }
-            echo "网络不好  ";
+            echo "网络不好\n";
         }
         echo "WordPress安装完成\n";
         return true;
@@ -347,7 +351,7 @@ class WordPress{
                 $this->file_record('登录失败,获取cookie失败');
                 return false;
             }
-            echo '网络不好  ';
+            echo "网络不好\n";
         }
         echo "登录成功\n";
         return true;
@@ -403,7 +407,7 @@ class WordPress{
                 $this->file_record('获取权限wpnonce失败');
                 return '';
             }
-            echo '网络不好  ';
+            echo "网络不好\n";
         }
         return $mat[1];
     }
@@ -446,7 +450,7 @@ class WordPress{
                 $this->file_record('网站设置失败');
                 return false;
             }
-    	    echo "网络不好  ";
+    	    echo "网络不好\n";
     	}
     	echo "网站设置成功\n";
     	return true;
@@ -563,7 +567,7 @@ class WordPress{
                 // $this->file_record('编辑个人资料失败');
                 return false;
             }
-            echo '网络不好  ';
+            echo "网络不好\n";
         }
         
         //更新
@@ -683,7 +687,7 @@ class WordPress{
                 $this->file_record('获取权限wpnonce失败');
                 return false;
             }
-            echo '网络不好  ';
+            echo "网络不好\n";
         }
         echo "获取插件启用链接成功\n";
         
@@ -699,7 +703,7 @@ class WordPress{
                 $this->file_record("启用{$name}失败");
                 return false;
             }
-            echo '网络不好  ';
+            echo "网络不好\n";
         }
         echo "启用{$name}成功\n";
         return true;
@@ -810,7 +814,7 @@ class WordPress{
                 $this->file_record('设置seo插件失败');
                 return false;
             }
-            echo '网络不好  ';
+            echo "网络不好\n";
         }
         echo "设置seo插件成功\n";
         return true;
@@ -1003,7 +1007,7 @@ class WordPress{
                  $this->file_record('设置社交meta失败');
                  return false;
              }
-             echo '网络不好  ';
+             echo "网络不好\n";
         }
         echo "设置社交meta成功\n";
         return true;
@@ -1013,8 +1017,9 @@ class WordPress{
     * 下载一个随机主题
     * $browse  主题类型;new最新主题,popular热门主题
     */
-    public function theme_down($browse='popular'){
-        if($browse=='news'){
+    public function theme_down(){
+        $browse = $this->browse;
+        if($browse=='new'){
             $theme_num=9200;//主题数量
         }else{
             $browse=='popular';
@@ -1033,119 +1038,102 @@ class WordPress{
             'action'               =>  'query-themes',
         ];
         
-        //获取主题列表
+        //获取随机主题列表
         for ($i = 0; $i < 10; $i++) {
             $response=$this->curl_post($p_url,$p_data,$this->cookie);
+            if(strpos($response,'Briefly unavailable for scheduled maintenance')!==false){
+                echo "{等待5秒}：Briefly unavailable for scheduled maintenance\n";
+                sleep(5);
+            }
+            
             $themes_arr=json_decode($response,true);
             if($themes_arr['success']==true && $themes_arr['data']['themes']){
                 break;
             }
             if($i==9){
-                $this->file_record('获取新主题链接失败');
+                $this->file_record('新主题链接获取失败');
                 return false;
             }
-            echo '网络不好  ';
+            echo "网络不好\n";
         }
-        echo "获取新主题链接成功\n";
+        echo "新主题链接获取成功\n";
         
         $themes_list = $themes_arr['data']['themes'];
         shuffle($themes_list);
         $rand_themes = $themes_list[0];//主题信息
-        // var_dump($rand_themes);exit;
         
         
-        // $theme_slug=$rand_themes['slug'];//主题id
-        // $theme_install_url=$rand_themes['install_url'];//安装url
-        // $theme_activate_url=$rand_themes['activate_url'];//启用url
-        // $theme_customize_url=$rand_themes['customize_url'];//编辑/自定义 主题url
+        //$rand_themes['slug'];//主题id
+        //$rand_themes['install_url'];//安装url
+        //$rand_themes['activate_url'];//启用url
+        //$rand_themes['customize_url'];//编辑/自定义 主题url
         // if(isset($rand_themes['parent'])){
-        //     $theme_parent_slug=$rand_themes['parent']['slug'];//父级主题id
-        // }else{
-        //     $theme_parent_slug='';
+        //     $rand_themes['parent']['slug'];//父级主题id
         // }
         
         //下载随机主题
-        echo sprintf("开始下载新主题:%s\n",$rand_themes['slug']);
-        //下载方式1
-        // $this->curl_get($rand_themes['install_url'],$this->cookie,40);
-        
-        //下载方式2
-        $res = $this->theme_down_func($rand_themes['slug'],'新主题');
-        if($res && isset($rand_themes['parent'])){
-            echo sprintf("开始下载父主题:%s\n",$rand_themes['parent']['slug']);
-            $this->theme_down_func($rand_themes['parent']['slug'],'父主题');
-        }
-        return $rand_themes;
-    }
-
-    /*
-    * 下载主题函数
-    * $slug 主题id
-    * $name
-    * return bool
-    */
-    public function theme_down_func($slug,$name='主题'){
-        $p_url=$this->host.'wp-admin/theme-install.php?browse=popular';
-        $reg='/var _wpUpdatesSettings = {"ajax_nonce":"(.*?)"/';
-        if(!$ajax_nonce=$this->get_wpnonce_func($p_url,$reg)){
-            $this->file_record("{$name}下载失败,获取权限wpnonce失败");
-            return false;
-        }
-        $p_url=$this->host.'wp-admin/admin-ajax.php';
-        $p_data=[
-            'slug'              =>  $slug,
-            'action'            =>  'install-theme',
-            '_ajax_nonce'       =>  $ajax_nonce,
-            '_fs_nonce'         =>  '',
-            'username'          =>  '',
-            'password'          =>  '',
-            'connection_type'   =>  '',
-            'public_key'        =>  '',
-            'private_key'       =>  '',
-        ];
         for ($i = 0; $i < 10; $i++) {
-            $response=$this->curl_post($p_url,$p_data,$this->cookie,40);
-            if($response==false){
-                echo '网络不好  ';
-                continue;
+            $response=$this->curl_get($rand_themes['install_url'],$this->cookie,55);
+            if(strpos($response,'Briefly unavailable for scheduled maintenance')!==false){
+                echo "{等待5秒}：Briefly unavailable for scheduled maintenance\n";
+                sleep(5);
             }
-            $arr=json_decode($response,true);
-            if($arr['success']==true || $arr['data']['errorMessage']=='目标目录已存在。'){
+            if(strpos($response,'</strong>成功。</p>')!==false || strpos($response,'<p>目标目录已存在')!==false){
                 break;
             }
-            // if(strpos($response,'\u4e0b\u8f7d\u5931\u8d25\u3002') !==false || strpos($response,'\u53d1\u751f\u4e86\u9884\u6599\u4e4b\u5916\u7684\u9519\u8bef\u3002WordPress.org') !==false){
-            //     continue;
-            // }
             if($i==9){
-                $this->file_record("{$name}下载失败");
+                // $this->file_record('新主题下载失败');
+                echo "新主题下载失败\n";
                 return false;
             }
-            echo '网络不好  ';
+            echo "网络不好\n";
+            
         }
-        echo "{$name}下载成功\n";
-        return true;
-    }
-
-    //启用新主题
-    public function theme_enb($theme){
-        if(!$theme || !isset($theme['activate_url'])){
-            $this->file_record('启用新主题失败');
-            return false;
+        echo sprintf("新主题下载成功:%s\n",$rand_themes['slug']);
+        
+        
+        if(isset($rand_themes['parent'])){
+            echo sprintf("开始下载父主题:%s\n",$rand_themes['parent']['slug']);
+        }
+        
+        //启用主题
+        $pp = sprintf('%s/wp-content/themes/%s',$this->rpath,strtolower($rand_themes['slug']));
+        if(isset($rand_themes['parent']['slug'])){
+            $pp2 = sprintf('%s/wp-content/themes/%s',$this->rpath,strtolower($rand_themes['parent']['slug']));
         }
         for ($i = 0; $i < 10; $i++) {
-             $response=$this->curl_get($theme['activate_url'],$this->cookie);
-            if(strpos($response,'<div id="message2" class="updated notice is-dismissible"><p>新主题已启用')!==false){
+            $response=$this->curl_get($rand_themes['activate_url'],$this->cookie);
+            if(strpos($response,'<p>新主题已启用')!==false){
                 break;
+            }elseif(strpos($response,'<p>当前启用的主题已受损')!==false){
+                //主题受损，重新下载
+                echo "新主题受损,重新下载\n";
+                $this->deldir($pp);
+                if(isset($rand_themes['parent']['slug'])){
+                    $this->deldir($pp2);
+                }
+                $this->theme_down();
+            }elseif(strpos($response,'<p>此站点遇到了致命错误')!==false || strpos($response,'<p>请求的主题不存在')!==false){
+                //主题报错，重新下载
+                echo "新主题报错,重新下载\n";
+                $this->deldir($pp);
+                if(isset($rand_themes['parent']['slug'])){
+                    $this->deldir($pp2);
+                }
+                $this->theme_down();
             }
-             if($i==9){
-                 $this->file_record('启用新主题失败');
-                 return false;
-             }
-             echo '网络不好  ';
+            
+            if($i==5){
+                // $this->file_record('启用新主题失败');
+                echo "新主题启用失败\n";
+                return false;
+            }
+            echo "网络不好\n";
         }
         echo "新主题启用成功\n";
         return true;
     }
+
 
     //创建菜单
     public function menu_add(){
@@ -1328,7 +1316,7 @@ class WordPress{
     //         if(strpos($response,$cond)!==false){
     //             return true;
     //         }
-    //         echo '网络不好  ';
+    //         echo "网络不好\n";
     //     }
     //     return false;
     // }
@@ -1372,7 +1360,7 @@ class WordPress{
     //下载wp程序压缩包
     public function down_wp($cof_wplink){
         $name=basename($cof_wplink);
-        $sfile=__DIR__.'/'.$name;
+        $sfile=__DIR__ .'/'.$name;
         if(!is_file($sfile)){
             echo "开始下载wp\n";
             $this->down_file($cof_wplink,$sfile);
@@ -1384,7 +1372,7 @@ class WordPress{
     public function down_seozip(){
         $d_name='all-in-one-seo-pack.tar.gz';
         $d_link=base64_decode('aHR0cHM6Ly9yYXcuZ2l0aHVidXNlcmNvbnRlbnQuY29tL21pYmFvMjAyMi9xYXp4c3cyMDIyL21haW4v').'wp/'.$d_name;
-        $sfile=__DIR__.'/'.$d_name;
+        $sfile=__DIR__ .'/'.$d_name;
         if(!is_file($sfile)){
             echo "开始下载seo插件\n";
             $this->down_file($d_link,$sfile);
@@ -1405,6 +1393,26 @@ class WordPress{
         return true;
     }
 
+    //删除目录
+    public function deldir($dir){
+      if(is_dir($dir)){
+        if($dir_handle = @opendir($dir)){
+          while ($filename = readdir($dir_handle)){
+            if($filename != '.' && $filename != '..'){
+                $subFile = $dir . "/" . $filename;
+                if(is_dir($subFile)){
+                    $this->deldir($subFile);
+                } 
+                if(is_file($subFile)){
+                    @unlink($subFile);
+                }
+            }
+          }
+          closedir($dir_handle); //关闭目录资源
+          @rmdir($dir); //删除空目录
+        }
+      }
+    }
 
     //获取目录列表 type=all,dir,file
     public function get_dirlist($path,$type='all'){
@@ -1490,7 +1498,7 @@ class WordPress{
     public function file_record($msg){
         echo $msg=$msg."\n";
         $str=sprintf('%s----%s----%s',$this->site,date('Y-m-d'),$msg);
-        file_put_contents(__DIR__.'/fail_site.txt',$str,FILE_APPEND);
+        file_put_contents(__DIR__ .'/fail_site.txt',$str,FILE_APPEND);
     }
 
     //网站分类名称

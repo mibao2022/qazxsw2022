@@ -144,7 +144,7 @@ foreach($site_arr as $key=>$val){
     }
     echo sprintf("站点创建成功\n%s\n",$response);
     $web_data=json_decode($response,true);
-	if( $webData['databaseStatus'] === false ){
+	if( $web_data['databaseStatus'] === false ){
 		$wp->file_record('数据库创建失败');
 		$bt->WebDeleteSite($web_data['siteId'],$site);
 		continue;

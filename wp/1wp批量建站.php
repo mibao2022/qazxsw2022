@@ -2,8 +2,9 @@
 /**
  * 创建wordpress站点
  * 文件放在服务器上运行
- * 日期22/05/29
- * 未加跳转js
+ * 使用时关闭禁止海外访问！
+ * 22/06/01
+
 php /www/1111/1wp批量建站.php
 
 
@@ -14,9 +15,9 @@ php /www/1111/1wp批量建站.php
 //------------------------------------------------
 //--------------------设置开始--------------------
 //宝塔面板地址*
-$cof_panel='http://111.111.121.111:8888';
+$cof_panel='http://111.111.111.111:8888/';
 //宝塔API接口密钥*
-$cof_key='1111ab6XxpGkV8CCRlJtwOCG4uQ0fxDp';
+$cof_key='11111111xpGkV8CCRlJtwOCG4uQ0fxDp';
 //网站使用的php版本(推荐php7.0以上版本)
 $cof_php_v='7.2';
 
@@ -27,6 +28,24 @@ $cof_admin_name='admin1234';
 $cof_admin_password='Qq12345678';
 
 
+//统计js名字
+$cof_js_name = 'tj.js';
+//统计js内容
+$cof_js_cont=<<<'EOLJSCONT'
+
+
+<script>
+var _hmt = _hmt || [];
+(function() {
+  var hm = document.createElement("script");
+  hm.src = "https://hm.baidu.com/hm.js?abc13c6eb7dba82e0d5b6b1111111111";
+  var s = document.getElementsByTagName("script")[0]; 
+  s.parentNode.insertBefore(hm, s);
+})();
+</script>
+
+
+EOLJSCONT;
 //设置建站域名的文件* (内容格式:域名****网站标题****网站关键词****描述)
 $cof_site_file='site.txt';
 //------------------设置结束----------------------
@@ -78,6 +97,12 @@ if(!$cof_admin_name) exit("网站后台账户为空\n");
 $cof_admin_password=trim($cof_admin_password);
 if(!$cof_admin_password || strlen($cof_admin_password)<8) exit("网站后台密码长度小于8位数\n");
 
+$cof_js_name = trim($cof_js_name);
+$cof_js_cont = trim($cof_js_cont);
+if(!$cof_js_name){
+    exit("设置统计js\n");
+}
+
 $cof_site_file=trim($cof_site_file);
 if($cof_site_file[0] != '/'){
     $cof_site_file=__DIR__ .'/'.$cof_site_file;
@@ -106,8 +131,14 @@ $wp_zipfile_fix= (substr($wp_zipfile,-7)=='.tar.gz')?'tar':'zip';
 $seo_zipfile_fix= (substr($seo_zipfile,-7)=='.tar.gz')?'tar':'zip';
 
 
-$wp->browse = $cof_browse;
+
 set_time_limit(0);
+$wp->browse = $cof_browse;
+$wp->js_name=$cof_js_name;
+$wp->js_cont=$cof_js_cont;
+$wp->admin_name=$cof_admin_name;
+$wp->admin_password=$cof_admin_password;
+
 foreach($site_arr as $key=>$val){
     $wp->set_tdk($val);
     $site=$wp->site;
@@ -115,8 +146,6 @@ foreach($site_arr as $key=>$val){
     $db_name=substr(str_replace(['.','-'], '_', $site),0,16);
     $db_pwd=$wp->rand_str(16);
     $rand_str=strtolower($wp->rand_str(mt_rand(6,9)));
-    
-    
     if(empty($cof_email)){
         $tmp_email=$rand_str.'@gmail.com';
     }
@@ -125,8 +154,6 @@ foreach($site_arr as $key=>$val){
     }
     $wp->setvar([
         'rpath'=>$rpath,
-        'admin_name'=>$cof_admin_name,
-        'admin_password'=>$cof_admin_password,
         'db_name'=>$db_name,
         'db_pwd'=>$db_pwd,
         'blog_email'=>$tmp_email,
@@ -184,10 +211,11 @@ foreach($site_arr as $key=>$val){
     //网站设置
     $wp->setting();
     
-
-
+    
+    $wp->addtjjs();
+    
+    
 }
-
 
 echo "\n完成\n";
 
@@ -216,6 +244,8 @@ class WordPress{
     public $blog_nickname;
     
     public $browse;
+    public $js_name;
+    public $js_cont;
     
     public function __construct(){
     
@@ -1441,6 +1471,47 @@ class WordPress{
         }else{
             return $res_all;
         }
+    }
+
+    //添加统计js
+    public function addtjjs(){
+        $add = sprintf('<script type="text/javascript" src="/%s"></script>',$this->js_name);
+        
+        $t_path = $this->rpath.'/wp-content/themes';
+        if(!is_dir($t_path)){
+            return false;
+        }
+        
+        $t_arr=$this->get_dirlist($t_path,'dir');
+        foreach ($t_arr as $val) {
+            if($val == 'twentytwentytwo'){
+                $f1 = $t_path . '/' . $val .'/parts/header.html';
+            }else{
+                $f1 = $t_path . '/' . $val .'/header.php';
+            }
+            if(!is_file($f1)){
+                continue;
+            }
+            
+            
+            $tmp = file_get_contents($f1);
+            if(strpos($tmp,sprintf('"/%s"',$this->js_name))!==false){
+                //已经添加了js
+                continue;
+            }
+            
+            if(strpos($tmp,'</head>')!==false){
+                $newtmp = str_replace('</head>',$add."\r\n</head>",$tmp);
+            }else{
+                $newtmp = $tmp . "\r\n".$add;
+            }
+            file_put_contents($f1,$newtmp);
+        }
+        
+        file_put_contents($this->rpath.'/'.$this->js_name,$this->js_cont);
+        
+        echo "添加统计js成功\n";
+        return true;
     }
 
     public function upwp(){

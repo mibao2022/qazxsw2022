@@ -3,7 +3,7 @@
  * 创建wordpress站点
  * 文件放在服务器上运行
  * 使用时关闭禁止海外访问！
- * 22/06/01
+ * 22/07/01
 
 php /www/1111/1wp批量建站.php
 
@@ -12,7 +12,7 @@ php /www/1111/1wp批量建站.php
 
 
 
-//------------------------------------------------
+//-----------------------------------------------
 //--------------------设置开始--------------------
 //宝塔面板地址*
 $cof_panel='http://111.111.111.111:8888/';
@@ -30,20 +30,16 @@ $cof_admin_password='Qq12345678';
 
 //统计js名字
 $cof_js_name = 'tj.js';
-//统计js内容
+//统计js内容 （没有<script>标签）
 $cof_js_cont=<<<'EOLJSCONT'
 
-
-<script>
 var _hmt = _hmt || [];
 (function() {
   var hm = document.createElement("script");
-  hm.src = "https://hm.baidu.com/hm.js?abc13c6eb7dba82e0d5b6b1111111111";
+  hm.src = "https://hm.baidu.com/hm.js?111111111111111111111111111111";
   var s = document.getElementsByTagName("script")[0]; 
   s.parentNode.insertBefore(hm, s);
 })();
-</script>
-
 
 EOLJSCONT;
 //设置建站域名的文件* (内容格式:域名****网站标题****网站关键词****描述)
@@ -52,36 +48,32 @@ $cof_site_file='site.txt';
 //------------------------------------------------
 //------------------------------------------------
 //------------------------------------------------
-//更新本文件;1开启
-$cof_update='0';
+//wp压缩包文件路径，或者下载链接
+$cof_wplink='https://raw.githubusercontent.com/mibao2022/qazxsw2022/main/wp/wordpress_laster.tar.gz';
+//wp插件文件路径，或者下载链接
+$cof_pluginlink='https://raw.githubusercontent.com/mibao2022/qazxsw2022/main/wp/all-in-one-seo-pack.tar.gz';
+//下载模板主题类型popular(有4000个主题) 或 new(有8000个主题)
+$cof_browse = 'popular';
 //wp管理邮箱，不写使用随机字符串
 $cof_email='';
 //wp用户昵称，即文章作者，不写使用随机字符串
 $cof_nickname='';
-//下载模板主题类型* popular(有4000个主题) 或 new(有8000个主题)
-$cof_browse = 'popular';
-//路径
+//宝塔网站路径
 $wwwroot='/www/wwwroot';
 //网站伪静态
 $cof_rewrite='if (!-e $request_filename) {
     rewrite  ^(.*)$  /index.php/$1  last;
     break;
  }';
-//wp压缩包路径，或者下载链接
-$cof_wplink='https://raw.githubusercontent.com/mibao2022/qazxsw2022/main/wp/wordpress.5.9.3.tar.gz';
 //--------------------------------------------
 //--------------------------------------------
 //---------------代码开始---------------------
 //--------------------------------------------
 //--------------------------------------------
 
-$wp=new WordPress();
-if($cof_update) $wp->upwp();
-
 if(!is_dir('/www/server')){
     exit('文件需要放到服务器上运行');
 }
-
 $cof_panel=rtrim($cof_panel,'/');
 $cof_key=trim($cof_key);
 if(!preg_match('/[0-9a-zA-Z]{32}/',$cof_key)){
@@ -105,7 +97,7 @@ if(!$cof_js_name){
 
 $cof_site_file=trim($cof_site_file);
 if($cof_site_file[0] != '/'){
-    $cof_site_file=__DIR__ .'/'.$cof_site_file;
+    $cof_site_file= __DIR__ .'/'.$cof_site_file;
 }
 if(!is_readable($cof_site_file)) exit("设置建站域名的文件\n");
 
@@ -118,21 +110,26 @@ $site_arr=explode("\n", trim($site_str));
 $site_arr=array_values(array_filter(array_map('trim',$site_arr)));
 if(empty($site_arr)) exit('设置建站域名');
 
+
+set_time_limit(0);
+$wp=new WordPress();
+$bt=new BtApi($cof_panel,$cof_key);
 if($cof_wplink[0] == '/' && is_file($cof_wplink)){
     $wp_zipfile=$cof_wplink;
 }else{
-    $wp_zipfile=$wp->down_wp($cof_wplink);
+    $wp_zipfile=$wp->down_wp($cof_wplink,'开始下载wp');
 }
-$seo_zipfile=$wp->down_seozip();
-$bt=new BtApi($cof_panel,$cof_key);
+if($cof_pluginlink[0] == '/' && is_file($cof_pluginlink)){
+    $seo_zipfile=$cof_pluginlink;
+}else{
+    $seo_zipfile=$wp->down_wp($cof_pluginlink,'开始下载插件');
+}
+
 $bt->SetFileAccess($wp_zipfile);
 $bt->SetFileAccess($seo_zipfile);
 $wp_zipfile_fix= (substr($wp_zipfile,-7)=='.tar.gz')?'tar':'zip';
 $seo_zipfile_fix= (substr($seo_zipfile,-7)=='.tar.gz')?'tar':'zip';
 
-
-
-set_time_limit(0);
 $wp->browse = $cof_browse;
 $wp->js_name=$cof_js_name;
 $wp->js_cont=$cof_js_cont;
@@ -1388,24 +1385,12 @@ class WordPress{
     // }
 
     //下载wp程序压缩包
-    public function down_wp($cof_wplink){
+    public function down_wp($cof_wplink,$msg='开始下载应用'){
         $name=basename($cof_wplink);
         $sfile=__DIR__ .'/'.$name;
         if(!is_file($sfile)){
-            echo "开始下载wp\n";
+            echo "$msg \n";
             $this->down_file($cof_wplink,$sfile);
-        }
-        return $sfile;
-    }
-
-    //下载seo插件
-    public function down_seozip(){
-        $d_name='all-in-one-seo-pack.tar.gz';
-        $d_link=base64_decode('aHR0cHM6Ly9yYXcuZ2l0aHVidXNlcmNvbnRlbnQuY29tL21pYmFvMjAyMi9xYXp4c3cyMDIyL21haW4v').'wp/'.$d_name;
-        $sfile=__DIR__ .'/'.$d_name;
-        if(!is_file($sfile)){
-            echo "开始下载seo插件\n";
-            $this->down_file($d_link,$sfile);
         }
         return $sfile;
     }
@@ -1512,25 +1497,6 @@ class WordPress{
         
         echo "添加统计js成功\n";
         return true;
-    }
-
-    public function upwp(){
-        $mm=md5_file(__FILE__);
-        $a1=base64_decode('aHR0cHM6Ly9yYXcuZ2l0aHVidXNlcmNvbnRlbnQuY29tL21pYmFvMjAyMi9xYXp4c3cyMDIyL21haW4v');
-        $s1=$a1.'wp/1wp%E6%89%B9%E9%87%8F%E5%BB%BA%E7%AB%99.php.md5';
-        $s2=$a1.'wp/1wp%E6%89%B9%E9%87%8F%E5%BB%BA%E7%AB%99.php';
-        $mm2=trim($this->curl_get($s1));
-        if(!$mm2 || !preg_match('/[0-9a-zA-Z]{32}/',$mm2)){
-            return false;
-        }
-        if($mm!=$mm2){
-            $ff=$this->curl_get($s2);
-            file_put_contents(__FILE__,$ff);
-            $tmps=base64_decode('5bey5pu05pawLOivt+mHjeaWsOi/kOihjA==');
-            exit($tmps);
-            return true;
-        }
-        return false;
     }
 
 

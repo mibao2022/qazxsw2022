@@ -351,11 +351,13 @@ class WordPress{
             'Submit'            =>  '安装WordPress',
             'language'          =>  'zh_CN'
         ];
-        for ($i = 0; $i < 10; $i++) {
-            $response=$this->curl_post($p_url,$p_data);
+        for ($i = 0; $i < 10; $i++){
+            $response=$this->curl_post($p_url,$p_data,array(),40);
             if(strpos($response,'<p>WordPress安装完成。谢谢！</p>')!==false || strpos($response,'<p>WordPress has been installed. Thank you, and enjoy!</p>')!==false){
                 break;
-            }elseif (strpos($response,'<h1>已安装过</h1>')!==false || strpos($response,'<h1>Already Installed</h1>')!==false) {
+            }elseif(strpos($response,'<h1>已安装过</h1>')!==false || strpos($response,'<h1>Already Installed</h1>')!==false) {
+                break;
+            }elseif(strpos($response,'>一些数据表不可用。也许需要<')!==false){
                 break;
             }
             if($i==9){
@@ -363,6 +365,7 @@ class WordPress{
                 return false;
             }
             echo "网络不好\n";
+            sleep(1);
         }
         echo "WordPress安装完成\n";
         return true;
@@ -379,6 +382,7 @@ class WordPress{
                 return false;
             }
             echo "网络不好\n";
+	    sleep(1);
         }
         echo "登录成功\n";
         return true;

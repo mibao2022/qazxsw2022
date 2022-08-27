@@ -359,7 +359,7 @@ class WordPress{
                 break;
             }
             if($i==9){
-                $this->file_record('WordPress安装完成');
+                $this->file_record('WordPress安装失败');
                 return false;
             }
             echo "网络不好\n";

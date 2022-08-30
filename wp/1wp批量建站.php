@@ -196,7 +196,7 @@ foreach($site_arr as $key=>$val){
     
     //登录wp
     if(!$wp->login()){
-        $wp->file_record('登录wp失败');
+        //$wp->file_record('登录wp失败');
         $bt->WebDeleteSite($web_data['siteId'],$site);
         continue;
     }

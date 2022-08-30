@@ -403,6 +403,7 @@ class WordPress{
     	curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     	curl_setopt($ch, CURLOPT_POST, true);
     	curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($p_data,'','&'));
+	curl_setopt($ch, CURLOPT_TIMEOUT, 15);
         curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
         curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
     	$response = curl_exec($ch);
@@ -474,7 +475,8 @@ class WordPress{
     		'submit'             => '保存更改',
     	];
     	for ($i = 0; $i < 10; $i++) {
-            if(strpos($this->curl_post($p_url,$p_data,$this->cookie),'<p><strong>设置已保存。</strong></p>')){
+	    $response=strpos($this->curl_post($p_url,$p_data,$this->cookie,array(),20);
+            if($response,'<p><strong>设置已保存。</strong></p>')){
                 break;
             }
             if($i==9){

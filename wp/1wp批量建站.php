@@ -403,7 +403,7 @@ class WordPress{
     	curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     	curl_setopt($ch, CURLOPT_POST, true);
     	curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($p_data,'','&'));
-	curl_setopt($ch, CURLOPT_TIMEOUT, 15);
+	curl_setopt($ch, CURLOPT_TIMEOUT, 20);
         curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
         curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
     	$response = curl_exec($ch);
@@ -475,7 +475,7 @@ class WordPress{
     		'submit'             => '保存更改',
     	];
     	for ($i = 0; $i < 10; $i++) {
-	    $response=strpos($this->curl_post($p_url,$p_data,$this->cookie,array(),20);
+	    $response=strpos($this->curl_post($p_url,$p_data,$this->cookie,20);
             if($response,'<p><strong>设置已保存。</strong></p>')){
                 break;
             }
@@ -1291,7 +1291,7 @@ class WordPress{
         $p_data['menu']=$menu;
         $p_data['menu-settings-column-nonce']=$menu_settings_column_nonce;
         for ($i = 0; $i < 10; $i++) {
-            $response = $this->curl_post($p_url,$p_data,$this->cookie);
+            $response = $this->curl_post($p_url,$p_data,$this->cookie,25);
             if(strpos($response,'<div class="menu-item-bar">')!==false){
                 break;
             }

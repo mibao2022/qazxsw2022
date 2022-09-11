@@ -3,7 +3,7 @@
  * 创建wordpress站点
  * 文件放在服务器上运行
  * 使用时关闭禁止海外访问！
- * 22/07/01
+ * 22/08/08
 
 php /www/1111/1wp批量建站.php
 
@@ -14,18 +14,18 @@ php /www/1111/1wp批量建站.php
 
 //-----------------------------------------------
 //--------------------设置开始--------------------
-//宝塔面板地址*
-$cof_panel='http://111.111.111.111:8888/';
+//宝塔面板地址(带端口号)* 
+$cof_panel='http://111.111.111.111:34638/';
 //宝塔API接口密钥*
-$cof_key='11111111xpGkV8CCRlJtwOCG4uQ0fxDp';
+$cof_key='11111111111111111111111111111111';
 //网站使用的php版本(推荐php7.0以上版本)
-$cof_php_v='7.2';
+$cof_php_v='7.4';
 
 
 //wp网站后台账号*
-$cof_admin_name='admin1234';
+$cof_admin_name='admin';
 //wp网站后台密码*
-$cof_admin_password='Qq12345678';
+$cof_admin_password='Ss778899';
 
 
 //统计js名字
@@ -33,13 +33,6 @@ $cof_js_name = 'tj.js';
 //统计js内容 （没有<script>标签）
 $cof_js_cont=<<<'EOLJSCONT'
 
-var _hmt = _hmt || [];
-(function() {
-  var hm = document.createElement("script");
-  hm.src = "https://hm.baidu.com/hm.js?111111111111111111111111111111";
-  var s = document.getElementsByTagName("script")[0]; 
-  s.parentNode.insertBefore(hm, s);
-})();
 
 EOLJSCONT;
 //设置建站域名的文件* (内容格式:域名****网站标题****网站关键词****描述)
@@ -208,10 +201,9 @@ foreach($site_arr as $key=>$val){
     //网站设置
     $wp->setting();
     
-    
+    //加跳转/统计js
     $wp->addtjjs();
-    
-    
+
 }
 
 echo "\n完成\n";
@@ -382,7 +374,7 @@ class WordPress{
                 return false;
             }
             echo "网络不好\n";
-	    sleep(1);
+			sleep(1);
         }
         echo "登录成功\n";
         return true;
@@ -403,7 +395,7 @@ class WordPress{
     	curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     	curl_setopt($ch, CURLOPT_POST, true);
     	curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($p_data,'','&'));
-	curl_setopt($ch, CURLOPT_TIMEOUT, 20);
+		curl_setopt($ch, CURLOPT_TIMEOUT, 20);
         curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
         curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
     	$response = curl_exec($ch);
@@ -460,7 +452,7 @@ class WordPress{
     		'_wpnonce'           => $wpnonce,
     		'_wp_http_referer'   => '/wp-admin/options-general.php',
     		'blogname'           => $this->blog_name,//标题
-    		'blogdescription'    => $this->blog_desc,//副标题
+    		'blogdescription'    => '',//副标题
     		'siteurl'            => 'http://'.$this->site,
     		'home'               => 'http://'.$this->site,
     		'new_admin_email'    => $this->blog_email,
@@ -475,8 +467,8 @@ class WordPress{
     		'submit'             => '保存更改',
     	];
     	for ($i = 0; $i < 10; $i++) {
-	    $response=strpos($this->curl_post($p_url,$p_data,$this->cookie,20);
-            if($response,'<p><strong>设置已保存。</strong></p>')){
+			$response=$this->curl_post($p_url,$p_data,$this->cookie,20);
+            if(strpos($response,'<p><strong>设置已保存。</strong></p>')){
                 break;
             }
             if($i==9){
@@ -484,6 +476,7 @@ class WordPress{
                 return false;
             }
     	    echo "网络不好\n";
+    	    sleep(5);
     	}
     	echo "网站设置成功\n";
     	return true;
@@ -533,6 +526,8 @@ class WordPress{
                 $this->file_record('评论设置失败');
                 return false;
             }
+            echo "网络不好\n";
+            sleep(5);
         }
         echo "评论设置成功\n";
     	return true;
@@ -577,6 +572,8 @@ class WordPress{
                 $this->file_record('固定链接设置失败');
                 return false;
             }
+            echo "网络不好\n";
+            sleep(5);
         }
         echo "固定链接设置成功\n";
     	return true;
@@ -596,11 +593,12 @@ class WordPress{
                 break;
             }
             if($i==9){
-                echo "编辑个人资料失败\n";
+                echo "编辑个人资料失败1\n";
                 // $this->file_record('编辑个人资料失败');
                 return false;
             }
             echo "网络不好\n";
+            sleep(5);
         }
         
         //更新
@@ -638,11 +636,12 @@ class WordPress{
                 break;
             }
             if($i==9){
-                echo "编辑个人资料失败\n";
+                echo "编辑个人资料失败2\n";
                 // $this->file_record('编辑个人资料失败');
                 return false;
             }
             echo '网络不好';
+            sleep(5);
         }
         echo "编辑个人资料成功\n";
         return true;
@@ -652,10 +651,21 @@ class WordPress{
     public function category_add(){
         $p_url=$this->host.'wp-admin/edit-tags.php?taxonomy=category';
         $reg='/<input type="hidden" id="_wpnonce_add-tag" name="_wpnonce_add-tag" value="(.*?)"/';
-        if(!$wpnonce=$this->get_wpnonce_func($p_url,$reg)){
-            $this->file_record('固定链接设置失败,获取权限wpnonce失败');
-            return false;
+        
+        for($i = 0; $i < 10; $i++) {
+            $wpnonce=$this->get_wpnonce_func($p_url,$reg);
+            if($wpnonce){
+                break;
+            }
+            if($i==9){
+                $this->file_record('分类设置失败,获取权限wpnonce失败');
+                return false;
+            }
+            echo '网络不好';
+            sleep(5);
         }
+        echo "分类设置,获取wpnonce成功\n";
+        
         
         $num=5;//栏目数量
         $arr=$this->rand_lanmu($num);
@@ -676,7 +686,6 @@ class WordPress{
             $p_data['slug']= is_numeric($key) ? sprintf('column%s',$key) : $key;//别名,url规则
             $this->curl_post($p_url,$p_data,$this->cookie);
         }
-        
         
         echo "添加分类成功\n";
         return true;
@@ -1088,6 +1097,7 @@ class WordPress{
                 return false;
             }
             echo "网络不好\n";
+            sleep(5);
         }
         echo "新主题链接获取成功\n";
         
@@ -1120,7 +1130,7 @@ class WordPress{
                 return false;
             }
             echo "网络不好\n";
-            
+            sleep(5);
         }
         echo sprintf("新主题下载成功:%s\n",$rand_themes['slug']);
         

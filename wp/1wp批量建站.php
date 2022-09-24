@@ -152,7 +152,7 @@ foreach($site_arr as $key=>$val){
     
     
     //创建站点
-    echo sprintf("\n------搭建第%s个站点:%s------\n",$key+1,$site);
+    echo sprintf("\n------搭建第%s个站点: %s ------\n",$key+1,$site);
     $response=$bt->AddSite($site,$rpath,$cof_php_v,'MySQL',$db_name,$db_pwd);
     if(strpos($response,'"siteStatus": true') === false || empty($response) ){
         $wp->file_record(sprintf("站点创建失败\n%s\n",$response));

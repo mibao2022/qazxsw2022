@@ -3,6 +3,7 @@
  * 创建wordpress站点
  * 文件放在服务器上运行
  * 使用时关闭禁止海外访问！
+ * 如果失败次数太多 服务器卡顿，建议在凌晨2点左右开始建站！
  * 22/08/08
 
 php /www/1111/1wp批量建站.php
@@ -1752,7 +1753,7 @@ class BtApi{
     private function HttpPostCookie($url, $data){
         $ch=curl_init();
         curl_setopt($ch, CURLOPT_URL, $url);
-        curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 20);
         curl_setopt($ch, CURLOPT_POST, true);
         curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($data, '', '&'));
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);

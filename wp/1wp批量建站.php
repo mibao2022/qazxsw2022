@@ -1,9 +1,9 @@
 <?php
 /**
  * 创建wordpress站点
- * 文件放在服务器上运行
- * 使用时关闭禁止海外访问！
- * 如果失败次数太多 服务器卡顿，建议在凌晨2点左右开始建站！
+ * 文件放在服务器上 使用shell命令运行
+ * 使用时关闭防火墙的禁止海外访问！关闭宝塔的数据库回收站！
+ * 如果失败次数太多 可能是服务器卡顿，建议在凌晨1点后开始建站！
  * 22/08/08
 
 php /www/1111/1wp批量建站.php
@@ -29,7 +29,7 @@ $cof_admin_name='admin';
 $cof_admin_password='Ss778899';
 
 
-//统计js名字
+//统计js名字 ，！使用php跳转需要删除$wp->addtjjs();
 $cof_js_name = 'tj.js';
 //统计js内容 （没有<script>标签）
 $cof_js_cont=<<<'EOLJSCONT'
@@ -202,7 +202,7 @@ foreach($site_arr as $key=>$val){
     //网站设置
     $wp->setting();
     
-    //加跳转/统计js
+    //加跳转/统计js  使用php跳转则关闭
     $wp->addtjjs();
 
 }

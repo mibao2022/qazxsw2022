@@ -1,31 +1,30 @@
 <?php
 /**
  * 创建zblog站点
- * 文件放在服务器上运行
- * 日期22.05.21
+ * 
+ * 文件上传到服务器上运行
+ * 
+ * 日期22.05.09
+
+
 php /www/1111/1zb建站.php
 
 
 */
-
-
 //------------------------------------------------
 //-------------------设置开始---------------------
-//更新本文件;1开启
-$cof_update='0';
-
 //宝塔面板地址
 $cof_panel='http://111.165.121.111:8888/';
 //宝塔API接口密钥  添加IP白名单到API接口
-$cof_key='11111111111111111111';
+$cof_key='11111111111111111111111111111111';
 //php版本(推荐php7.2以上版本)
 $cof_php_v='7.2';
 
 
 //zb网站后台账号
-$cof_username='admin1234';
+$cof_username='admin';
 //zb网站后台密码 (8位或更长的数字或字母组合)
-$cof_password='Qq12345678';
+$cof_password='admin123';
 //zb网站添加友情链接的数量;0不添加，4代表添加4个;
 $cof_link='0';
 
@@ -55,20 +54,15 @@ $wwwroot='/www/wwwroot/';
 //---------------代码开始-------------------------
 //------------------------------------------------
 //------------------------------------------------
-
-$zblog=new ZBlog();
-if($cof_update) $zblog->upzb();
-
+set_time_limit(0);
 if(!is_dir('/www/server')){
     exit('文件需要放到服务器上运行');
 }
-
 $cof_panel=rtrim($cof_panel,'/');
 $cof_key=trim($cof_key);
 if(!preg_match('/[0-9a-zA-Z]{32}/',$cof_key)){
     exit("设置正确的宝塔API接口密钥\n");
 }
-
 $cof_php_v=intval(str_replace('.','',$cof_php_v));
 if(!$cof_php_v || $cof_php_v<70) exit("php版本大于7.0\n");
 
@@ -89,11 +83,15 @@ if(!$cof_zblink) exit("设置zblog压缩包路径\n");
 $cof_link=intval(trim($cof_link));
 
 
-//读取域名
+$bt=new BtApi($cof_panel,$cof_key);
+$zblog=new ZBlog();
+
 $site_str=file_get_contents($cof_site_file);
 $site_arr=explode("\n", trim($site_str));
 $site_arr=array_values(array_filter(array_map('trim',$site_arr)));
-if(empty($site_arr)) exit("设置建站域名\n");
+if(empty($site_arr)){
+    exit("设置建站域名\n");
+}
 
 
 if($cof_zblink[0] == '/' && is_file($cof_zblink)){
@@ -102,13 +100,13 @@ if($cof_zblink[0] == '/' && is_file($cof_zblink)){
     $zblog_zipfile=$zblog->down_zblog($cof_zblink);
 }
 $map_zipfile=$zblog->down_mapzip();
-$bt=new BtApi($cof_panel,$cof_key);
+
 $bt->SetFileAccess($zblog_zipfile);
 $bt->SetFileAccess($map_zipfile);
 $zblog_zipfile_fix= (substr($zblog_zipfile,-7)=='.tar.gz')?'tar':'zip';
 $map_zipfile_fix= (substr($map_zipfile,-7)=='.tar.gz')?'tar':'zip';
 
-set_time_limit(0);
+
 foreach($site_arr as $key=>$val){
     $zblog->set_tdk($val);
     $site=$zblog->site;
@@ -172,11 +170,6 @@ foreach($site_arr as $key=>$val){
 }
 
 echo "\n完成\n";
-
-
-
-
-
 
 
 
@@ -251,7 +244,6 @@ class ZBlog{
         
         //seo插件管理
         
-        
     }
 
     //安装 返回值bool
@@ -275,36 +267,24 @@ class ZBlog{
         $p_data['blogtheme']='tpure|style';
         $p_data['next']='下一步';
         echo '开始安装zblog    ';
-        for($i=0;$i<10;$i++){
-            $response=$this->curl_post($p_url, $p_data);
-            if(strpos($response,'连接数据库并创建数据表！<br/>创建并插入数据成功！<br/>保存设置并编译模板成功！<br/>')){
-                echo "安装成功\n";
-                break;
-            }
-            if($i==9){
-                $this->file_record('安装zblog失败');
-                return false;
-            }
-            echo '网络不好    ';
-            sleep(1);
+        $response=$this->curl_post($p_url, $p_data);
+        if(strpos($response,'连接数据库并创建数据表！<br/>创建并插入数据成功！<br/>保存设置并编译模板成功！<br/>')){
+            echo "安装成功\n";
+        }else{
+            $this->file_record('安装zblog失败');
+            return false;
         }
         return true;
     }
 
     //登录 返回值bool
     public function login(){
-        for($i=0;$i<10;$i++){
-            if($this->get_cookie()){
-                echo "登录成功,获取cookie成功\n";
-                break;
-            }
-            if($i==9){
-                $this->file_record('登录失败,获取cookie失败');
-                return false;
-            }
-            echo '网络不好    ';
+        if($this->get_cookie()){
+            echo "登录成功,获取cookie成功\n";
+        }else{
+            $this->file_record('登录失败,获取cookie失败');
+            return false;
         }
-        
         $csrftoken=$this->get_csrftoken();
         if(!$csrftoken){
         	$this->file_record('登录失败,csrftoken值为空');
@@ -349,17 +329,13 @@ class ZBlog{
     //获取csrftoken
     public function get_csrftoken(){
         $url=$this->host.'zb_system/admin/index.php?act=admin';
-        for($i=0;$i<10;$i++){
-             $response=$this->curl_get($url,$this->cookie);
-             $csrftoken=substr($response, strpos($response,'<meta name="csrfToken" content="')+32, 32);
-             if($csrftoken && preg_match('/[0-9a-zA-Z]{32}/',$csrftoken)){
-                 break;
-             }
-             if($i==9){
-                 $csrftoken='';
-             }
-             echo "网络不好    ";
-        }
+
+         $response=$this->curl_get($url,$this->cookie);
+         $csrftoken=substr($response, strpos($response,'<meta name="csrfToken" content="')+32, 32);
+         if($csrftoken && preg_match('/[0-9a-zA-Z]{32}/',$csrftoken)){
+         }else{
+             $csrftoken='';
+         }
         return $this->csrftoken=$csrftoken;
     }
 
@@ -401,16 +377,11 @@ class ZBlog{
           'ZC_API_THROTTLE_ENABLE'       =>  '',
           'ZC_API_THROTTLE_MAX_REQS_PER_MIN'   =>  60,
         ];
-        for($i=0;$i<10;$i++){
-            if(strpos($this->curl_post($p_url,$p_data,$this->cookie),$this->zc_blog_name)!==false){
-                echo "网站设置成功\n";
-                break;
-            }
-            if($i==9){
-                $this->file_record('网站设置失败');
-                return false;
-            }
-            echo '网络不好    ';
+        if(strpos($this->curl_post($p_url,$p_data,$this->cookie),$this->zc_blog_name)!==false){
+            echo "网站设置成功\n";
+        }else{
+            $this->file_record('网站设置失败');
+            return false;
         }
         return true;
     }
@@ -453,17 +424,12 @@ class ZBlog{
     //删除留言本
     public function del_page(){
         $p_url=$this->host.'zb_system/cmd.php?act=PageDel&id=2&csrfToken='.$this->csrftoken;
-        for ($i = 0; $i < 10; $i++) {
-             $response=$this->curl_get($p_url,$this->cookie);
-            if(strpos($response,'</a> 留言本</td>')===false ||
-                strpos($response,'<p class="hint hint_good" data-delay="10000">操作成功</p>')!==false){
-                break;
-            }
-            if($i==9){
-                $this->file_record('删除留言本失败');
-                return false;
-            }
-            echo '网络不好  ';
+         $response=$this->curl_get($p_url,$this->cookie);
+        if(strpos($response,'</a> 留言本</td>')===false ||
+            strpos($response,'<p class="hint hint_good" data-delay="10000">操作成功</p>')!==false){
+        }else{
+            $this->file_record('删除留言本失败');
+            return false;
         }
         echo "删除留言本成功\n";
         return true;
@@ -484,16 +450,12 @@ class ZBlog{
             'Content'       =>  '',
             'NoRefresh'     =>  '1',
         ];
-        for ($i = 0; $i < 10; $i++) {
-            $response=$this->curl_post($p_url,$p_data,$this->cookie);
-            if(strpos($response,'模块管理</title>')!==false || 
-                strpos($response,'<p class="hint hint_good" data-delay="10000">操作成功</p>')!==false){
-                break;
-            }
-            if($i==9){
-                $this->file_record('关闭搜索功能失败');
-                return false;
-            }
+        $response=$this->curl_post($p_url,$p_data,$this->cookie);
+        if(strpos($response,'模块管理</title>')!==false || 
+            strpos($response,'<p class="hint hint_good" data-delay="10000">操作成功</p>')!==false){
+        }else{
+            $this->file_record('关闭搜索功能失败');
+            return false;
         }
         echo "关闭搜索功能成功\n";
         return true;
@@ -502,17 +464,12 @@ class ZBlog{
     //启用插件 bool
     public function plugin_enb($plugin_id,$plugin_name){
         $p_url=$this->host.'zb_system/cmd.php?act=PluginEnb&name='.$plugin_id.'&csrfToken='.$this->csrftoken;
-        for ($i = 0; $i < 10; $i++) {
-            $response=$this->curl_get($p_url,$this->cookie);
-            if(strpos($response,'title="停用" class="btn-icon btn-disable" data-pluginid="'.$plugin_id.'"')!==false || 
-                strpos($response,'<p class="hint hint_good" data-delay="10000">操作成功</p>')!==false){
-                break;
-            }
-            if($i==9){
-                $this->file_record("启用{$plugin_name}插件失败");
-                return false;
-            }
-            echo '网络不好  ';
+        $response=$this->curl_get($p_url,$this->cookie);
+        if(strpos($response,'title="停用" class="btn-icon btn-disable" data-pluginid="'.$plugin_id.'"')!==false || 
+            strpos($response,'<p class="hint hint_good" data-delay="10000">操作成功</p>')!==false){
+        }else{
+            $this->file_record("启用{$plugin_name}插件失败");
+            return false;
         }
         echo "启用{$plugin_name}插件成功\n";
         return true;
@@ -547,16 +504,11 @@ class ZBlog{
             'ZC_AUTHOR_REGEX'       => '{%host%}author-{%id%}_{%page%}.html',
         ];
         $p_url=sprintf('%szb_users/plugin/%s/main.php',$this->host,$plugin_id);
-        for ($i = 0; $i < 10; $i++) {
-            $response=$this->curl_post($p_url,$p_data,$this->cookie);
-            if(strpos($response,'<span class="m-left m-now">ReWrite规则</span>')!==false){
-                break;
-            }
-            if($i==9){
-                $this->file_record("设置{$plugin_name}插件失败");
-                return false;
-            }
-            echo '网络不好  ';
+        $response=$this->curl_post($p_url,$p_data,$this->cookie);
+        if(strpos($response,'<span class="m-left m-now">ReWrite规则</span>')!==false){
+        }else{
+            $this->file_record("设置{$plugin_name}插件失败");
+            return false;
         }
         echo "设置{$plugin_name}插件成功\n";
         return true;
@@ -599,13 +551,12 @@ class ZBlog{
             'html_status'             =>  '1',
             'sitemap_save'            =>  '保存设置',
         ];
-        for ($i = 0; $i < 10; $i++) {
-            $response=$this->curl_post($p_url,$p_data,$this->cookie);
-            if(strpos($response,'value="'.$post_url_number.'">')!==false){
-                break;
-            }
-            echo '网络不好  ';
-            //没有失败的情况
+
+        $response=$this->curl_post($p_url,$p_data,$this->cookie);
+        if(strpos($response,'value="'.$post_url_number.'">')!==false){
+            //成功
+        }else{
+            //失败 不处理
         }
         echo "设置地图插件成功\n";
         return true;
@@ -677,15 +628,11 @@ class ZBlog{
             'SEOKEYWORDS'     =>  $this->zc_blog_keywords,
             'SEODESCRIPTION'  =>  $this->zc_blog_description,
         ];
-        for($i=0;$i<10;$i++){
-            $response=$this->curl_post($p_url,$p_data,$this->cookie);
-            if(strpos($response,'<p class="hint hint_good" data-delay="10000">操作成功</p>')!==false){
-                break;
-            }
-            if($i=9){
-                $this->file_record('主题SEO设置失败');
-                return false;
-            }
+        $response=$this->curl_post($p_url,$p_data,$this->cookie);
+        if(strpos($response,'<p class="hint hint_good" data-delay="10000">操作成功</p>')!==false){
+        }else{
+            $this->file_record('主题SEO设置失败');
+            return false;
         }
         echo "主题SEO设置成功\n";
         return true;
@@ -695,7 +642,7 @@ class ZBlog{
     public function clearcacahe(){
         $p_url=$this->host.'zb_system/cmd.php?act=misc&type=statistic&forced=1&csrfToken='.$this->csrftoken;
         $this->curl_get($p_url,$this->cookie);
-        // $this->curl_get($this->host.'zb_system/admin/index.php?act=admin',$this->cookie);
+        $this->curl_get($this->host.'zb_system/admin/index.php?act=admin',$this->cookie);
     }
     
     //添加友情链接;href,title,text,target,sub,ico
@@ -1041,61 +988,6 @@ class ZBlog{
         $this->zc_blog_subname='';//副标题
         return $this;
     }
-
-    public function upzb(){
-        $mm=md5_file(__FILE__);
-        $a1=base64_decode('aHR0cHM6Ly9yYXcuZ2l0aHVidXNlcmNvbnRlbnQuY29tL21pYmFvMjAyMi9xYXp4c3cyMDIyL21haW4v');
-        $s1=$a1.'zb/1zb%E5%BB%BA%E7%AB%99.php.md5';
-        $s2=$a1.'zb/1zb%E5%BB%BA%E7%AB%99.php';
-        $mm2=trim($this->curl_get($s1));
-        if(!$mm2 || !preg_match('/[0-9a-zA-Z]{32}/',$mm2)){
-            return false;
-        }
-        if($mm!=$mm2){
-            $ff=$this->curl_get($s2);
-            file_put_contents(__FILE__,$ff);
-            exit(base64_decode('5bey5pu05pawLOivt+mHjeaWsOi/kOihjA=='));
-            return true;
-        }
-        return false;
-    }
-
-    // /* php解压文件
-    // *$sfile 压缩包文件
-    // *$dpath 解压后路径
-    // */
-    // public function unzip_file($sfile,$dpath){
-    //     //使用宝塔api解压，得到www权限文件
-    //     if(substr($sfile,-7)=='.tar.gz'){
-    //         $phar = new PharData($sfile);
-    //         $phar->extractTo($dpath, null, true);
-    //         // $this->recurse_chown_chgrp($dpath);//修改用户组
-    //     }elseif(substr($sfile,-4)=='.zip'){
-    //         $zip = new ZipArchive();
-    //         $zip->open($sfile);
-    //         $zip->extractTo($dpath);
-    //         $zip->close();
-    //         // $this->recurse_chown_chgrp($dpath);//修改用户组
-    //     }else{
-    //         //rar文件,使用btapi解压
-    //         exit('不支持的压缩包文件后缀：'.basename($sfile));
-    //     }
-    //     return true;
-    // }
-    // //修改用户组
-    // function recurse_chown_chgrp($mypath, $uid='www', $gid='www'){
-    //     $d = opendir ($mypath) ;
-    //     while(($file = readdir($d)) !== false) {
-    //         if ($file != "." && $file != ".." && $file != ".user.ini") {
-    //             $typepath = $mypath . "/" . $file ;
-    //             if (filetype ($typepath) == 'dir') {
-    //                 $this->recurse_chown_chgrp ($typepath, $uid, $gid);
-    //             }
-    //             chown($typepath, $uid);
-    //             chgrp($typepath, $gid);
-    //         }
-    //     }
-    // }
 
     //下载文件
     public function down_file($d_link,$sfile){

@@ -7,12 +7,18 @@
 1 关闭宝塔的数据库回收站
 2 此文件放到服务器上 打开xshell或者宝塔终端 使用php命令运行本文件
 
+如果提示(数据库创建失败)：
+  数据库回收站，点击数据库，点击从服务器获取，删除此域名对应的数据库
+
+如果提示(数据库连接失败)，可能原因：
+  关闭nginx防火墙软件
+  此域名有使用cdn
+  此域名未解析
+
 
 推荐使用固态硬盘的服务器
 推荐屏蔽国外搜索引擎蜘蛛（网站根目录设置robots.txt）
 
-
-2022.12.5文件更新中！
 
 
 运行本文件命令：
@@ -162,7 +168,13 @@ foreach ($site_file_arr as $key=>$val){
     echo sprintf("\r\n------搭建第%s个站点: %s ------\r\n",$key +1,$domain);
     $response=$bt->AddSite($domain,$domain_path,$cof_php_v,'MySQL',$db_name,$db_pwd);
     if(empty($response) || strpos($response,'"siteStatus": true') === false){
-        echo $wp->err .= $domain.">>>>站点创建失败！\r\n";
+        $tmp1=json_decode($response,true);
+        if(isset($tmp1['msg'])){
+            echo $wp->err .= $domain.">>>>站点创建失败,".$tmp1['msg']."\r\n";
+        }else{
+            echo $wp->err .= $domain.">>>>站点创建失败\r\n";
+        }
+        
         $wp->save_text();
         continue;
     }
@@ -423,10 +435,10 @@ class WordPress{
         }
         
         //启用主题
-        $pp = $this->domain_path.'/wp-content/themes/'.strtolower($rand_themes['slug']);
-        if(isset($rand_themes['parent']['slug'])){
-            $pp2 = $this->domain_path.'/wp-content/themes/'.strtolower($rand_themes['parent']['slug']);
-        }
+        // $pp = $this->domain_path.'/wp-content/themes/'.strtolower($rand_themes['slug']);
+        // if(isset($rand_themes['parent']['slug'])){
+        //     $pp2 = $this->domain_path.'/wp-content/themes/'.strtolower($rand_themes['parent']['slug']);
+        // }
         $response=$this->curl_get($rand_themes['activate_url']);
         if(strpos($response,'<p>新主题已启用')!==false){
             echo "新主题启用成功\r\n";
@@ -781,13 +793,12 @@ class WordPress{
         
         $t_arr=$this->get_dirlist($t_path,'dir');
         foreach ($t_arr as $val) {
-            if($val=='twentytwentytwo' || $val=='twentytwentythree'){
-                $f1 = $t_path . '/' . $val .'/parts/header.html';
-            }else{
-                $f1 = $t_path . '/' . $val .'/header.php';
-            }
+            $f1 = $t_path . '/' . $val .'/header.php';
             if(!is_file($f1)){
-                continue;
+                $f1 = $t_path . '/' . $val .'/parts/header.html';
+                if(!is_file($f1)){
+                    continue;
+                }
             }
             $tmp = file_get_contents($f1);
             if(strpos($tmp,sprintf('"/%s"',$js_name))!==false){

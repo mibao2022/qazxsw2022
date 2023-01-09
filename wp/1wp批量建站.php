@@ -22,7 +22,7 @@
 
 
 运行本文件命令：
-php /www/1111/1wp批量建站.php
+php /www/1111/2023速简版-wordpress-bt建站.php
 
 
 */
@@ -53,7 +53,7 @@ $cof_is_seoplugin='1';
 
 
 //统计js名字,创建到站点根目录和网站模板中,(留空不添加js)--值可为空
-$cof_js_name='baidu.js';
+$cof_js_name='tj.js';
 //统计js内容(没有<script>标签)--值可为空
 $cof_js_cont=<<<'EOLJSCONT'
 
@@ -91,6 +91,70 @@ $cof_rewrite='if (!-e $request_filename) {
     rewrite  ^(.*)$  /index.php/$1  last;
     break;
  }';
+ //robots.txt文件内容 当前网站地址用<domain>表示  值可为空
+$cof_robots='
+User-agent: Googlebot
+Disallow: /
+User-agent: googlebot-image
+Disallow: /
+User-agent: googlebot-mobile
+Disallow: /
+User-agent: MSNBot
+Disallow: /
+User-agent: Slurp
+Disallow: /
+User-agent: Teoma
+Disallow: /
+User-agent: twiceler
+Disallow: /
+User-agent: Gigabot
+Disallow: /
+User-agent: Scrubby
+Disallow: /
+User-agent: Robozilla
+Disallow: /
+User-agent: Nutch
+Disallow: /
+User-agent: ia_archiver
+Disallow: /
+User-agent: naverbot
+Disallow: /
+User-agent: yeti
+Disallow: /
+User-agent: yahoo
+Disallow: /
+User-agent: yahoo-mmcrawler
+Disallow: /
+User-agent: yahoo-blogs/v3.9
+Disallow: /
+User-agent: psbot
+Disallow: /
+User-agent: asterias
+Disallow: /
+User-agent: YodaoBot
+Disallow: /
+User-agent: PetalBot
+Disallow: /
+User-agent: YandexBot
+Disallow: /
+User-agent: JikeSpider
+Disallow: /
+User-agent: serpstatbot
+Disallow: /
+User-agent: domainsbot
+Disallow: /
+User-agent: AhrefsBot
+Disallow: /
+User-agent: MJ12bot
+Disallow: /
+User-agent: DotBot
+Disallow: /
+User-agent: *
+Disallow: /wp-admin/
+Disallow: 
+Sitemap: http://<domain>/sitemap.rss
+Sitemap: http://<domain>/sitemap.xml
+';
 //------------------------------------------------
 //------------------------------------------------
 if(!is_dir('/www/server')){
@@ -134,6 +198,7 @@ $cof_email=trim($cof_email);
 $cof_wplink=trim($cof_wplink);
 $cof_pluginlink=trim($cof_pluginlink);
 $cof_rewrite=trim($cof_rewrite);
+$cof_robots=trim($cof_robots);
 
 
 set_time_limit(0);
@@ -218,7 +283,11 @@ foreach ($site_file_arr as $key=>$val){
     
     //加跳转/统计js
     if($cof_js_name){$wp->addtjjs($cof_js_name,$cof_js_cont);}
-
+    
+    //设置robots文件
+    if($cof_robots){
+        $wp->addrobots($cof_robots);
+    }
     
     $wp->save_text();
     
@@ -325,13 +394,21 @@ class WordPress{
             'Submit'            =>  '安装WordPress',
             'language'          =>  'zh_CN'
         ];
-        $response=$this->curl_post($p_url,$p_data,array(),40);
-        if(strpos($response,'成功！')!==false){
-            echo "wordpress安装成功\r\n";
-        }else{
-            echo $this->err .= $this->domain.">>>>wordpress安装失败！\r\n";
-            return false;
+        for ($i = 0; $i < 3; $i++) {
+            $response=$this->curl_post($p_url,$p_data,array(),20);
+            preg_match('/(成功！|安装完成|已安装过|一些数据表不可用)/',$response,$mat);
+            //var_dump($mat);
+            if(isset($mat[1]) && $mat[1]){
+                break;
+            }else{
+                echo "网络不好\r\n";
+            }
+            if($i==2){
+                echo $this->err .= $this->domain.">>>>wordpress安装失败！\r\n";
+                return false;
+            }
         }
+        echo "wordpress安装成功\r\n";
         return true;
     }
     
@@ -358,7 +435,12 @@ class WordPress{
         // curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
     	$response = curl_exec($ch);
     	curl_close($ch);
-
+    
+        if(!$response){
+            echo $this->err.=$this->domain.">>>>登录失败，访问失败\r\n";
+            return false;
+        }
+        
     	list($header, $body) = explode("\r\n\r\n", $response);
     	preg_match_all("/set\-cookie:([^\r\n]*)/i", $header, $matches);
     	if(isset($matches[1][2]) && $matches[1][2]){
@@ -405,7 +487,7 @@ class WordPress{
         $response=$this->curl_post($p_url,$p_data);
         $themes_arr=json_decode($response,true);
         if(isset($themes_arr['success']) && $themes_arr['success']==true && $themes_arr['data']['themes']){
-            // echo "新主题链接获取成功\r\n";
+            echo "新主题链接获取成功\r\n";
         }else{
             echo "新主题链接获取失败\r\n";
             return false;
@@ -652,10 +734,15 @@ class WordPress{
         //获取seo插件启用链接
         $p_url=$this->home_page.'/wp-admin/plugins.php';
         $response=$this->curl_get($p_url);
-        // $reg_en='/<strong>All In One SEO Pack<\/strong><div class="row-actions visible"><span class=\'activate\'><a href="(.*?)" id="activate-all-in-one-seo-pack"/';
-        $reg_zh='/<strong>多合一SEO包<\/strong><div class="row-actions visible"><span class=\'activate\'><a href="(.*?)" id="activate-all-in-one-seo-pack"/';
-        preg_match($reg_zh,$response,$mat_zh);
-        if(isset($mat_zh[1]) && $mat_zh[1]){
+        // if(strpos($response,'aria-label="禁用多合一SEO集">禁用</a>')!==false){
+        if(strpos($response,'aria-label="禁用多合一SEO包">禁用</a>')!==false){
+            echo "seo插件已启用\r\n";
+            return true;
+        }
+        // $reg_new='/<strong>多合一SEO集<\/strong><div class="row-actions visible"><span class=\'activate\'><a href="(.*?)" id="activate-all-in-one-seo-pack"/';
+        $reg_old='/<strong>多合一SEO包<\/strong><div class="row-actions visible"><span class=\'activate\'><a href="(.*?)" id="activate-all-in-one-seo-pack"/';
+        preg_match($reg_old,$response,$mat);
+        if(isset($mat[1]) && $mat[1]){
             // echo "获取seo插件链接成功\r\n";
         }else{
             echo $this->err.=$this->domain.">>>>启用seo插件失败1，获取链接\r\n";
@@ -663,7 +750,7 @@ class WordPress{
         }
         
         //启用seo插件
-        $p_url=$this->home_page.'/wp-admin/'.str_replace('&amp;','&',$mat_zh[1]);
+        $p_url=$this->home_page.'/wp-admin/'.str_replace('&amp;','&',$mat[1]);
         $response=$this->curl_get($p_url);
         if(strpos($response,'插件已启用')!==false || strpos($response,'您点击的链接已过期')!==false){
             echo "启用seo插件成功\r\n";
@@ -797,7 +884,10 @@ class WordPress{
             if(!is_file($f1)){
                 $f1 = $t_path . '/' . $val .'/parts/header.html';
                 if(!is_file($f1)){
-                    continue;
+                    $f1 = $t_path . '/' . $val .'/block-template-parts/header.html';
+                    if(!is_file($f1)){
+                        continue;
+                    }
                 }
             }
             $tmp = file_get_contents($f1);
@@ -874,7 +964,14 @@ class WordPress{
         // chown($sfile,'www');
         return true;
     }
-
+    
+    //添加统计js
+    public function addrobots($robots){
+        $robots=str_replace('<domain>',$this->domain,$robots);
+        $fname=$this->domain_path.'/robots.txt';
+        file_put_contents($fname,$robots);
+    }
+    
     //设置网站信息
     public function set_tdk($tdk){
         $arr=explode('****',$tdk);

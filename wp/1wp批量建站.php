@@ -22,7 +22,7 @@
 
 
 运行本文件命令：
-php /www/1111/2023速简版-wordpress-bt建站.php
+php /www/1111/1wp批量建站.php
 
 
 */
@@ -152,8 +152,7 @@ Disallow: /
 User-agent: *
 Disallow: /wp-admin/
 Disallow: 
-Sitemap: http://<domain>/sitemap.rss
-Sitemap: http://<domain>/sitemap.xml
+Sitemap: http://<domain>/post-sitemap.xml
 ';
 //------------------------------------------------
 //------------------------------------------------

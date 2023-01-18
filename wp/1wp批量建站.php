@@ -1,29 +1,27 @@
 <?php
 /**
  * 
-2023 速简版
+2023版
 
 要求：
 1 关闭宝塔的数据库回收站
 2 此文件放到服务器上 打开xshell或者宝塔终端 使用php命令运行本文件
 
 如果提示(数据库创建失败)：
-  数据库回收站，点击数据库，点击从服务器获取，删除此域名对应的数据库
+  关闭宝塔数据库回收站功能，点击数据库，点击从服务器获取，删除此域名对应的数据库
 
 如果提示(数据库连接失败)，可能原因：
+  此域名未解析
   关闭nginx防火墙软件
   此域名有使用cdn
-  此域名未解析
+  需要手动建站
 
 
-推荐使用固态硬盘的服务器
-推荐屏蔽国外搜索引擎蜘蛛（网站根目录设置robots.txt）
+使用固态硬盘的服务器
+屏蔽国外搜索引擎蜘蛛（网站根目录设置robots.txt）
 
 
-
-运行本文件命令：
 php /www/1111/1wp批量建站.php
-
 
 */
 //-----------------------------------------------
@@ -84,13 +82,12 @@ $cof_browse = 'popular';
 $cof_email='';
 //wp压缩包在服务器上的完整路径，或者下载链接
 $cof_wplink='https://raw.githubusercontent.com/mibao2022/qazxsw2022/main/wp/wordpress_laster.tar.gz';
-//wp-seo插件在服务器上的完整路径，或者下载链接
+//All In One SEO 插件(旧版或者新版)在服务器上的完整路径，或者下载链接
 $cof_pluginlink='https://raw.githubusercontent.com/mibao2022/qazxsw2022/main/wp/all-in-one-seo-pack.tar.gz';
 //wp网站伪静态
-$cof_rewrite='if (!-e $request_filename) {
-    rewrite  ^(.*)$  /index.php/$1  last;
-    break;
- }';
+$cof_rewrite='try_files $uri $uri/ /index.php?$args;
+rewrite /wp-admin$ $scheme://$host$uri/ permanent;
+';
  //robots.txt文件内容 当前网站地址用<domain>表示  值可为空
 $cof_robots='
 User-agent: Googlebot
@@ -156,6 +153,7 @@ Sitemap: http://<domain>/post-sitemap.xml
 ';
 //------------------------------------------------
 //------------------------------------------------
+
 if(!is_dir('/www/server')){
     exit("文件放到有宝塔的服务器上运行\r\n");
 }
@@ -316,12 +314,7 @@ class WordPress{
     public $err;
     private $cookie;//网站cookie
     
-    
     public function __construct(){
-        
-    }
-    
-    public function __destruct(){
         
     }
     
@@ -332,7 +325,6 @@ class WordPress{
         }
     }
     
-
     //网站设置
     public function setting(){
         global $cof_is_muban,$cof_is_fenlei,$cof_is_caidan,$cof_is_seoplugin;
@@ -350,8 +342,7 @@ class WordPress{
         }
         
         if($cof_is_seoplugin == '1'){
-            $this->plugin_seo_enb();//启用seo插件
-            $this->plugin_seo_edit();//设置插件信息
+            $this->plugin_aioseo_check();//设置aioseo插件
         }
         
         return true;
@@ -374,12 +365,18 @@ class WordPress{
             'language'  =>  'zh_CN',
             'submit'    =>  '提交'
         ];
-        $response=$this->curl_post($p_url,$p_data);
-        if(strpos($response,'数据库连接成功')!==false || strpos($response,'Successful database connection')!==false){
-            echo "数据库连接成功\r\n";
-        }else{
-            echo $this->err .= $this->domain.">>>>数据库连接失败！\r\n";
-            return false;
+        for ($i = 0; $i < 3; $i++) {
+            $response=$this->curl_post($p_url,$p_data);
+            if(strpos($response,'数据库连接成功')!==false || strpos($response,'Successful database connection')!==false){
+                echo "数据库连接成功\r\n";
+                break;
+            }else{
+                echo "网络不好\r\n";
+            }
+            if($i==2){
+                echo $this->err .= $this->domain.">>>>数据库连接失败！\r\n";
+                return false;
+            }
         }
         
         $p_url=$this->home_page.'/wp-admin/install.php?step=2';
@@ -728,41 +725,81 @@ class WordPress{
         return true;
     }
 
-    //启用seo插件
-    public function plugin_seo_enb(){
-        //获取seo插件启用链接
-        $p_url=$this->home_page.'/wp-admin/plugins.php';
-        $response=$this->curl_get($p_url);
-        // if(strpos($response,'aria-label="禁用多合一SEO集">禁用</a>')!==false){
-        if(strpos($response,'aria-label="禁用多合一SEO包">禁用</a>')!==false){
-            echo "seo插件已启用\r\n";
-            return true;
+    //设置插件
+    public function plugin_aioseo_check(){
+        $p_url=$this->home_page .'/wp-admin/plugins.php';
+        for ($i = 0; $i < 3; $i++) {
+            $response = $this->curl_get($p_url);
+            if($response){ break; }
+            if($i==2){
+                echo $this->err .= $this->domain.">>>>设置aioseo插件失败,访问页面\r\n";
+                return false;
+            }
         }
-        // $reg_new='/<strong>多合一SEO集<\/strong><div class="row-actions visible"><span class=\'activate\'><a href="(.*?)" id="activate-all-in-one-seo-pack"/';
-        $reg_old='/<strong>多合一SEO包<\/strong><div class="row-actions visible"><span class=\'activate\'><a href="(.*?)" id="activate-all-in-one-seo-pack"/';
-        preg_match($reg_old,$response,$mat);
-        if(isset($mat[1]) && $mat[1]){
-            // echo "获取seo插件链接成功\r\n";
+        //file_put_contents(__DIR__.'/tmp1.txt',$response);
+        
+        //按新版本aioseo插件(new)规则去匹配
+        if(strpos($response,'启用All in One SEO">启用</a>')!==false || strpos($response,'启用多合一SEO集">启用')!==false){
+            $this->plugin_aioseo_enb_new($response);//启用
+            $this->plugin_aioseo_edit_new();//编辑
+    	    return true;
+        }
+        if(strpos($response,'aria-label="禁用多合一SEO集">禁用</a>')!==false){
+            $this->plugin_aioseo_edit_new();//编辑
+    	    return true;
+        }
+        
+        //按老版本aioseo插件(old)规则去匹配
+        if(strpos($response,'启用All In One SEO Pack">启用</a>')!==false || strpos($response,'启用多合一SEO包">启用')!==false){
+            $this->plugin_aioseo_enb_old($response);//启用
+            $this->plugin_aioseo_edit_old();//编辑
+    	    return true;
+        }
+        if(strpos($response,'aria-label="禁用多合一SEO包">禁用</a>')!==false){
+            $this->plugin_aioseo_edit_old();//编辑
+    	    return true;
+        }
+        // preg_match('/>3.7.1版本 \| 作者：<a href=".*?">All in One SEO Team<\/a>/',$aa,$mat);
+        // if(isset($mat[0]) && $mat[0]){
+        //     //老版本的aioseo插件
+        //     return true;
+        // }
+        
+        echo $this->err .= $this->domain.">>>>设置aioseo插件失败,未检测到此插件\r\n";
+	    return false;
+    }
+    
+    //启用aioseo插件(old)3.7.1版本
+    public function plugin_aioseo_enb_old($response=false){
+        if(!$response){
+            $p_url=$this->home_page.'/wp-admin/plugins.php';
+            $response=$this->curl_get($p_url);
+        }
+        //获取aioseo插件启用链接
+        $reg='/<strong>(多合一SEO包|All In One SEO Pack)<\/strong><div class="row-actions visible"><span class=\'activate\'><a href="(.*?)" id="activate-all-in-one-seo-pack"/';
+        preg_match($reg,$response,$mat);
+        if(isset($mat[2]) && $mat[2]){
+            // echo "获取aioseo插件(old)链接成功\r\n";
         }else{
-            echo $this->err.=$this->domain.">>>>启用seo插件失败1，获取链接\r\n";
+            echo $this->err.=$this->domain.">>>>启用aioseo插件(old)失败1，获取链接\r\n";
             return false;
         }
         
-        //启用seo插件
-        $p_url=$this->home_page.'/wp-admin/'.str_replace('&amp;','&',$mat[1]);
+        //启用aioseo插件
+        $p_url=$this->home_page.'/wp-admin/'.str_replace('&amp;','&',$mat[2]);
         $response=$this->curl_get($p_url);
         if(strpos($response,'插件已启用')!==false || strpos($response,'您点击的链接已过期')!==false){
-            echo "启用seo插件成功\r\n";
+            echo "启用aioseo插件(old)成功\r\n";
         }else{
-            echo $this->err.=$this->domain.">>>>启用seo插件失败2\r\n";
+            echo $this->err.=$this->domain.">>>>启用aioseo插件(old)失败2\r\n";
             return false;
         }
         $this->curl_get($this->home_page.'/wp-admin/index.php?page=aioseop-welcome');//初始化
         return true;
     }
     
-    //设置seo插件
-    public function plugin_seo_edit(){
+    //设置aioseo插件(old)3.7.1版本
+    public function plugin_aioseo_edit_old(){
         $p_url=$this->home_page.'/wp-admin/admin.php?page=all-in-one-seo-pack/aioseop_class.php';
         $response=$this->curl_get($p_url);
         
@@ -770,7 +807,7 @@ class WordPress{
         if(isset($mat[1]) && $mat[1]){
             $wpnonce=$mat[1];
         }else{
-            echo $this->err.=$this->domain.">>>>设置seo插件失败1，获取wpnonce\r\n";
+            echo $this->err.=$this->domain.">>>>设置aioseo插件(old)失败1，获取wpnonce\r\n";
             return false;
         }
 
@@ -794,9 +831,9 @@ class WordPress{
             'aiosp_use_original_title'                      =>  '0',
             'aiosp_home_title'                              =>  $this->blog_title,//网站首页标题
             'aiosp_length1'                                 =>  $blog_title_strlen,
-            'aiosp_home_description'                        =>  $this->blog_desc,
+            'aiosp_home_description'                        =>  $this->blog_desc,//网站首页描述
             'aiosp_length2'                                 =>  $blog_desc_strlen,
-            'aiosp_home_keywords'                           =>  $this->blog_keyw,
+            'aiosp_home_keywords'                           =>  $this->blog_keyw,//网站首页关键词
             'aiosp_use_static_home_info'                    =>  '0',
             'aiosp_force_rewrites'                          =>  '1',
             'aiosp_home_page_title_format'                  =>  '%page_title%',
@@ -863,14 +900,113 @@ class WordPress{
         ];
         $response = $this->curl_post($p_url,$p_data);
         if(strpos($response,"value='".$this->blog_title."'")!==false){
-            echo "设置seo插件成功\r\n";
+            echo "设置aioseo插件(old)成功\r\n";
         }else{
-            echo $this->err.=$this->domain.">>>>设置seo插件失败2\r\n";
+            echo $this->err.=$this->domain.">>>>设置aioseo插件(old)失败2\r\n";
             return false;
         }
         return true;
     }
     
+    
+    //启用aioseo插件(new)4.2.9版本
+    public function plugin_aioseo_enb_new($response=false){
+        if(!$response){
+            $p_url=$this->home_page.'/wp-admin/plugins.php';
+            $response=$this->curl_get($p_url);
+        }
+        //获取链接
+        $reg='/<strong>(All in One SEO|多合一SEO集)<\/strong><div class="row-actions visible"><span class=\'activate\'><a href="(.*?)" id="activate-all-in-one-seo-pack"/';
+        preg_match($reg,$response,$mat);
+        if(isset($mat[2]) && $mat[2]){
+            // echo "获取aioseo插件(new)链接成功\r\n";
+        }else{
+            echo $this->err.=$this->domain.">>>>启用aioseo插件(new)失败1，获取链接\r\n";
+            return false;
+        }
+        
+        //启用aioseo插件(new)
+        $p_url=$this->home_page.'/wp-admin/'.str_replace('&amp;','&',$mat[2]);
+        $response=$this->curl_get($p_url);
+        if(strpos($response,'AIOSEO &rsaquo; 入門導向')!==false || strpos($response,'插件已启用')!==false || strpos($response,'您点击的链接已过期')!==false){
+            echo "启用aioseo插件(new)成功\r\n";
+        }else{
+            // file_put_contents(__DIR__.'/tmp2.txt',$response);
+            echo $this->err.=$this->domain.">>>>启用aioseo插件(new)失败2\r\n";
+            return false;
+        }
+        // 初始化
+        //
+        return true;
+    }
+    
+    // 设置aioseo插件(new)4.2.9版本
+    public function plugin_aioseo_edit_new(){
+        $p_url=$this->home_page.'/wp-admin/admin.php?page=aioseo-search-appearance#/global-settings';
+        $response=$this->curl_get($p_url);
+        if(!$response){
+            echo $this->err.=$this->domain.">>>>设置aioseo插件(new)失败，返回值为空\r\n";
+            return false;
+        }
+        preg_match('/var aioseo = ([\s\S]*?)<\/script>/',$response,$mat);//匹配数据
+        if(!isset($mat[1]) || !$mat[1]){
+            echo $this->err.=$this->domain.">>>>设置aioseo插件(new)失败1，匹配参数失败\r\n";
+            return false;
+        }
+        
+        $json_str=rtrim(trim($mat[1]),';');
+        $arr=json_decode($json_str,true);
+        if(!is_array($arr) || empty($arr)){
+            echo $this->err.=$this->domain.">>>>设置aioseo插件(new)失败2，转换数据格式\r\n";
+            return false;
+        }
+        
+        //设置
+        $arr['options']['searchAppearance']['global']['schema']['websiteName']=$this->blog_name;//设置网站名称
+        $arr['options']['searchAppearance']['global']['siteTitle']=$this->blog_title;//设置网站 首页标题
+        $arr['options']['searchAppearance']['global']['metaDescription']=$this->blog_desc;//设置网站 首页描述
+        
+        $arr['options']['searchAppearance']['advanced']['useKeywords']=true;//开启关键词功能
+        $arr['options']['searchAppearance']['advanced']['useCategoriesForMetaKeywords']=true;//类别页面使用关键词
+        $arr['options']['searchAppearance']['advanced']['useTagsForMetaKeywords']=true;//标签页面使用关键词
+        $arr['options']['searchAppearance']['advanced']['dynamicallyGenerateKeywords']=true;//动态生成文章页关键词
+        if($this->blog_keyw){
+            $arr_gjc=explode(',',$this->blog_keyw);
+            foreach ($arr_gjc as $val){
+                $gjc[]=array("label"=>$val,"value"=>$val);
+            }
+        }else{
+            $gjc=array();
+        }
+        $arr['options']['searchAppearance']['global']['keywords']=json_encode($gjc);//设置网站 首页关键词
+        $arr['options']['sitemap']['general']['linksPerIndex']='10000';//设置post-sitemap.xml页面最大文章数
+        
+        $arr['options']['social']['facebook']['general']['enable']=false;//禁用社交網絡facebook的Open Graph標記
+        $arr['options']['social']['twitter']['general']['enable']=false;//禁用社交網絡Twitter的Open Graph標記
+        
+        $p_url=$this->home_page.'/wp-json/aioseo/v1/options';
+        $p_data=[
+        	'options' => $arr['options'],
+        	'dynamicOptions' => $arr['dynamicOptions'],
+        	'network' => false,
+        	'networkOptions' => array(),
+        ];
+        $p_data=json_encode($p_data);
+        $header=array(
+            'X-WP-Nonce' => 'X-WP-Nonce: '.$arr['nonce'],
+            'Accept' => 'Accept: */*',
+            'Content-Type' => 'Content-Type: application/json',
+            
+        );
+        $response = $this->curl_post($p_url,$p_data,$header);
+        if(strpos($response,'"success":true')!==false){
+            echo "设置aioseo插件(new)成功\r\n";
+        }else{
+            echo $this->err.=$this->domain.">>>>设置aioseo插件(new)失败3，提交数据\r\n";
+            return false;
+        }
+        return true;
+    }
     
     //添加统计js
     public function addtjjs($js_name,$js_cont){
@@ -991,10 +1127,15 @@ class WordPress{
     
     //get
     public function curl_get($url,$header=array(),$time=15){
+        if(!$header){
+            $header=array(
+                'Content-Type: application/x-www-form-urlencoded',
+                'Accept: text/html,application/xhtml+xml,application/xml;'
+            );
+        }
         if($this->cookie){
             $header[]=$this->cookie;
         }
-        $header=array_merge(array('Content-Type: text/html; charset=utf-8','Accept: text/html,application/xhtml+xml,application/xml;'), $header);
         $ch=curl_init();
         curl_setopt($ch, CURLOPT_URL, $url);
         curl_setopt($ch, CURLOPT_HEADER, false);
@@ -1011,15 +1152,23 @@ class WordPress{
 
     //post
     public function curl_post($url,$post_data=array(),$header=array(),$time=15){
+        if(!$header){
+            $header=array(
+                'Content-Type: application/x-www-form-urlencoded',
+                'Accept: text/html,application/xhtml+xml,application/xml;'
+            );
+        }
         if($this->cookie){
             $header[]=$this->cookie;
         }
-        $header=array_merge(array('Content-Type: application/x-www-form-urlencoded','Accept: text/html,application/xhtml+xml,application/xml;'), $header);
+        if(is_array($post_data)){
+            $post_data=http_build_query($post_data,'','&');
+        }
         $ch=curl_init();
         curl_setopt($ch, CURLOPT_URL, $url);
         curl_setopt($ch, CURLOPT_HEADER, false);
         curl_setopt($ch, CURLOPT_POST, true);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($post_data,'','&'));
+        curl_setopt($ch, CURLOPT_POSTFIELDS, $post_data);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);   
         curl_setopt($ch, CURLOPT_TIMEOUT, $time);
         // curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
@@ -1169,6 +1318,8 @@ class BtApi{
     }
 
 }
+
+
 
 
 

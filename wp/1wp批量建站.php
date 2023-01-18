@@ -83,7 +83,7 @@ $cof_email='';
 //wp压缩包在服务器上的完整路径，或者下载链接
 $cof_wplink='https://raw.githubusercontent.com/mibao2022/qazxsw2022/main/wp/wordpress_laster.tar.gz';
 //All In One SEO 插件(旧版或者新版)在服务器上的完整路径，或者下载链接
-$cof_pluginlink='https://raw.githubusercontent.com/mibao2022/qazxsw2022/main/wp/all-in-one-seo-pack.tar.gz';
+$cof_pluginlink='https://raw.githubusercontent.com/mibao2022/qazxsw2022/main/wp/all-in-one-seo-pack_new.tar.gz';
 //wp网站伪静态
 $cof_rewrite='try_files $uri $uri/ /index.php?$args;
 rewrite /wp-admin$ $scheme://$host$uri/ permanent;

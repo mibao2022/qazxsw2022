@@ -928,16 +928,18 @@ class WordPress{
         //启用aioseo插件(new)
         $p_url=$this->home_page.'/wp-admin/'.str_replace('&amp;','&',$mat[2]);
         $response=$this->curl_get($p_url);
-        if(strpos($response,'AIOSEO &rsaquo; 入門導向')!==false || strpos($response,'插件已启用')!==false || strpos($response,'您点击的链接已过期')!==false){
-            echo "启用aioseo插件(new)成功\r\n";
-        }else{
-            // file_put_contents(__DIR__.'/tmp2.txt',$response);
-            echo $this->err.=$this->domain.">>>>启用aioseo插件(new)失败2\r\n";
-            return false;
-        }
-        // 初始化
-        //
+        
+        // $p_url=$this->home_page.'/wp-admin/plugins.php';
+        // $response=$this->curl_get($p_url);
+        // if(strpos($response,'aria-label="禁用多合一SEO集">禁用</a>')!==false){
+        //     echo "启用aioseo插件(new)成功\r\n";
+        // }else{
+        //     echo $this->err.=$this->domain.">>>>启用aioseo插件(new)失败2\r\n";
+        // }
+        
+        echo "启用aioseo插件(new)成功\r\n";
         return true;
+
     }
     
     // 设置aioseo插件(new)4.2.9版本

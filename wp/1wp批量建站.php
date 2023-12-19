@@ -1,24 +1,9 @@
 <?php
 /**
- * 
-2023版
-
-要求：
-1 关闭宝塔的数据库回收站
-2 此文件放到服务器上 打开xshell或者宝塔终端 使用php命令运行本文件
-
-如果提示(数据库创建失败)：
-  关闭宝塔数据库回收站功能，点击数据库，点击从服务器获取，删除此域名对应的数据库
-
-如果提示(数据库连接失败)，可能原因：
-  此域名未解析
-  关闭nginx防火墙软件
-  此域名有使用cdn
-  需要手动建站
-
-
-使用固态硬盘的服务器
-屏蔽国外搜索引擎蜘蛛（网站根目录设置robots.txt）
+ * 测试wp6.4.1版本
+ *
+此文件放到服务器上 打开xshell或者宝塔终端 使用php命令运行本文件
+如果提示(数据库创建失败)：关闭宝塔数据库回收站功能，删除此域名对应的数据库
 
 
 php /www/1111/1wp批量建站.php
@@ -35,17 +20,17 @@ $cof_php_v='7.4';
 
 
 //wp网站后台账号*
-$cof_admin_name='admin';
+$cof_admin_name='admin111';
 //wp网站后台密码*
-$cof_admin_password='admin123';
+$cof_admin_password='admin222';
 
 
 //wp网站是否下载应用随机模板 1启用0禁用
 $cof_is_muban='1';
 //wp网站是否添加随机分类 1启用0禁用
-$cof_is_fenlei='0';
+$cof_is_fenlei='1';
 //wp网站是否启用和设置菜单(设置菜单需要先启用添加分类，有的主题不支持菜单) 1启用0禁用
-$cof_is_caidan='0';
+$cof_is_caidan='1';
 //wp网站是否启用seo插件 1启用0禁用，建议开启！
 $cof_is_seoplugin='1';
 
@@ -77,7 +62,7 @@ $cof_site_file='site.txt';
 //------------------------------------------------
 //------------------------------------------------
 //下载模板主题类型popular(有5000个主题) 或 new(有10000个主题)
-$cof_browse = 'popular';
+$cof_browse = 'new';
 //wp管理员邮箱,留空随机生成--值可为空
 $cof_email='';
 //wp压缩包在服务器上的完整路径，或者下载链接
@@ -241,12 +226,12 @@ foreach ($site_file_arr as $key=>$val){
         continue;
     }
     $web_data=json_decode($response,true);
-	if( $web_data['databaseStatus'] === false ){
-		echo $wp->err .= $domain.">>>>数据库创建失败！\r\n";
-		$bt->WebDeleteSite($web_data['siteId'],$domain,true);
-		$wp->save_text();
-		continue;
-	}
+    if( $web_data['databaseStatus'] === false ){
+        echo $wp->err .= $domain.">>>>数据库创建失败！\r\n";
+        $bt->WebDeleteSite($web_data['siteId'],$domain,true);
+        $wp->save_text();
+        continue;
+    }
     echo "站点创建成功\r\n";
     $bt->UnZip($path_wp,$domain_path,$path_wp_type);
     @unlink($domain_path.'/index.html');
@@ -411,45 +396,63 @@ class WordPress{
     //登录
     public function login_wp(){
         $this->cookie='';
-    	$p_url=$this->home_page.'/wp-login.php';
-    	$p_data = [
-    		'log' => $this->admin_name,
-    		'pwd' => $this->admin_password,
-    		'wp-submit' => '登录',
-    		'redirect_to' => $this->home_page.'/wp-admin/',
-    		'testcookie' => 1,
-    	];
-    	$ch = curl_init(); 
-    	curl_setopt($ch, CURLOPT_URL, $p_url);
-    	curl_setopt($ch, CURLOPT_HEADER, true);
-    	curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    	curl_setopt($ch, CURLOPT_POST, true);
-    	curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($p_data,'','&'));
-		curl_setopt($ch, CURLOPT_TIMEOUT, 30);
-		curl_setopt($ch, CURLOPT_FOLLOWLOCATION,true);
-        // curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-        // curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
-    	$response = curl_exec($ch);
-    	curl_close($ch);
-    
+        $p_url=$this->home_page.'/wp-login.php';
+        $p_data = [
+            'log' => $this->admin_name,
+            'pwd' => $this->admin_password,
+            'wp-submit' => '登录',
+            'redirect_to' => $this->home_page.'/wp-admin/',
+            'testcookie' => 1,
+        ];
+        $ch = curl_init(); 
+        curl_setopt($ch, CURLOPT_URL, $p_url);
+        curl_setopt($ch, CURLOPT_HEADER, true);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($p_data,'','&'));
+        curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+        curl_setopt($ch, CURLOPT_FOLLOWLOCATION,true);
+        $response = curl_exec($ch);
+        curl_close($ch);
         if(!$response){
             echo $this->err.=$this->domain.">>>>登录失败，访问失败\r\n";
             return false;
         }
         
-    	list($header, $body) = explode("\r\n\r\n", $response);
-    	preg_match_all("/set\-cookie:([^\r\n]*)/i", $header, $matches);
-    	if(isset($matches[1][2]) && $matches[1][2]){
+        
+        if(strpos($response,'正在执行例行维护，请一分钟后回来。')!==false){
+            echo "正在执行例行维护,睡眠60秒\r\n";
+            sleep(60);
+            $ch = curl_init(); 
+            curl_setopt($ch, CURLOPT_URL, $p_url);
+            curl_setopt($ch, CURLOPT_HEADER, true);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_POST, true);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($p_data,'','&'));
+            curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+            curl_setopt($ch, CURLOPT_FOLLOWLOCATION,true);
+            $response = curl_exec($ch);
+            curl_close($ch);
+            if(!$response){
+                echo $this->err.=$this->domain.">>>>登录失败，访问失败\r\n";
+                return false;
+            }
+        }
+        
+        
+        list($header, $body) = explode("\r\n\r\n", $response);
+        preg_match_all("/set\-cookie:([^\r\n]*)/i", $header, $matches);
+        if(isset($matches[1][2]) && $matches[1][2]){
             $re=str_replace(' path=/wp-admin; HttpOnly','',$matches[1][2]);
             $this->cookie = 'Cookie:'.$re;
-    	}else{
-    		$this->cookie = '';
-    		echo $this->err.=$this->domain.">>>>登录失败1，获取cookie！\r\n";
-    		return false;
-    	}
+        }else{
+            $this->cookie = '';
+            echo $this->err.=$this->domain.">>>>登录失败1，获取cookie！\r\n";
+            return false;
+        }
         
         $p_url2 = $this->home_page.'/wp-admin/index.php';
-    	$response = $this->curl_get($p_url2);
+        $response = $this->curl_get($p_url2);
         if(strpos($response,'<title>仪表盘')!==false){
             echo "登录成功\r\n";
             return true;
@@ -500,9 +503,14 @@ class WordPress{
         //     $rand_themes['parent']['slug'];//父级主题id
         // }
         
+
+        
         //下载随机主题
         $response=$this->curl_get($rand_themes['install_url'],array(),50);
-        if(strpos($response,'</strong>成功。')!==false || strpos($response,'<p>目标目录已存在')!==false){
+        // file_put_contents(__DIR__.'/tmp1.txt',$response);
+        if( strpos($response,'</strong>成功。')!==false || //wp6.2以下版本
+            strpos($response,'</strong> 成功。')!==false || //wp6.4版本
+            strpos($response,'<p>目标目录已存在')!==false){
             echo "新主题下载成功:".$rand_themes['slug']."\r\n";
         }else{
             echo "新主题下载失败\r\n";
@@ -590,9 +598,9 @@ class WordPress{
         }
         
         //2创建菜单
-    	preg_match('/id="closedpostboxesnonce" name="closedpostboxesnonce" value="(.*?)"/',$response,$mat_closedpostboxesnonce);
-    	preg_match('/id="meta-box-order-nonce" name="meta-box-order-nonce" value="(.*?)"/',$response,$mat_meta_box_order_nonce);
-    	preg_match('/id="update-nav-menu-nonce" name="update-nav-menu-nonce" value="(.*?)"/',$response,$mat_update_nav_menu_nonce);
+        preg_match('/id="closedpostboxesnonce" name="closedpostboxesnonce" value="(.*?)"/',$response,$mat_closedpostboxesnonce);
+        preg_match('/id="meta-box-order-nonce" name="meta-box-order-nonce" value="(.*?)"/',$response,$mat_meta_box_order_nonce);
+        preg_match('/id="update-nav-menu-nonce" name="update-nav-menu-nonce" value="(.*?)"/',$response,$mat_update_nav_menu_nonce);
         if(!isset($mat_closedpostboxesnonce[1]) || !isset($mat_meta_box_order_nonce[1]) || !isset($mat_update_nav_menu_nonce[1])){
             echo "创建菜单失败1，获取key失败\r\n";
             return false;
@@ -645,10 +653,13 @@ class WordPress{
             return false;
         }
         
+        
+        // file_put_contents(__DIR__.'/tmp1.txt',$response);
         //3分类添加至菜单
         preg_match('/<input type="hidden" name="menu" id="menu" value="(.*?)"/',$response,$mat_menu);
         preg_match('/<input type="hidden" id="menu-settings-column-nonce" name="menu-settings-column-nonce" value="(.*?)"/',$response,$mat_column_nonce);
-        preg_match('/<ul id="categorychecklist" data-wp-lists="list:category" class="categorychecklist form-no-clear">([\s\S]*?)<\/ul>/',$response,$mat_html);
+        // preg_match('/<ul id="categorychecklist" data-wp-lists="list:category" class="categorychecklist form-no-clear">([\s\S]*?)<\/ul>/',$response,$mat_html);//wp6.2
+        preg_match('/<ul id="categorychecklist"[^>]*>([\s\S]*?)<\/ul>/',$response,$mat_html);//wp6.4
         if(!isset($mat_menu[1]) || !isset($mat_column_nonce[1]) || !isset($mat_html[1])){
             echo "创建菜单失败3,获取分类失败\r\n";
             return false;
@@ -717,10 +728,12 @@ class WordPress{
         $r_data['save_menu']='保存菜单';
         $r_url=$this->home_page.'/wp-admin/nav-menus.php?menu='.$menu;
         $response=$this->curl_post($r_url,$r_data);
-         if(strpos($response,'<div id="message" class="updated notice is-dismissible"><p><strong>'.$menu_name.'</strong>已被更新。</p></div>') === false){
-            echo "设置菜单失败4,保存菜单\r\n";
-            return false;
-         }
+        //// file_put_contents(__DIR__.'/tmp1.txt',$response);
+        // if(strpos($response,'<div id="message" class="updated notice is-dismissible"><p><strong>'.$menu_name.'</strong>已被更新。</p></div>') === false || //wp6.2
+        //   strpos($response,'<div id="message" class="updated notice is-dismissible"><p><strong>'.$menu_name.'</strong> 已更新。</p></div>') === false ){ //wp6.4
+        //     echo "设置菜单失败4,保存菜单\r\n";
+        //     return false;
+        //  }
         echo "设置菜单成功\r\n";
         return true;
     }
@@ -736,28 +749,28 @@ class WordPress{
                 return false;
             }
         }
-        //file_put_contents(__DIR__.'/tmp1.txt',$response);
+        // file_put_contents(__DIR__.'/tmp1.txt',$response);
         
         //按新版本aioseo插件(new)规则去匹配
-        if(strpos($response,'启用All in One SEO">启用</a>')!==false || strpos($response,'启用多合一SEO集">启用')!==false){
+        if(strpos($response,'All in One SEO">启用</a>')!==false || strpos($response,'多合一SEO集">启用')!==false){
             $this->plugin_aioseo_enb_new($response);//启用
             $this->plugin_aioseo_edit_new();//编辑
-    	    return true;
+            return true;
         }
-        if(strpos($response,'aria-label="禁用多合一SEO集">禁用</a>')!==false){
+        if(strpos($response,'多合一SEO集">禁用</a>')!==false){
             $this->plugin_aioseo_edit_new();//编辑
-    	    return true;
+            return true;
         }
         
         //按老版本aioseo插件(old)规则去匹配
-        if(strpos($response,'启用All In One SEO Pack">启用</a>')!==false || strpos($response,'启用多合一SEO包">启用')!==false){
+        if(strpos($response,'All In One SEO Pack">启用</a>')!==false || strpos($response,'多合一SEO包">启用')!==false){
             $this->plugin_aioseo_enb_old($response);//启用
             $this->plugin_aioseo_edit_old();//编辑
-    	    return true;
+            return true;
         }
-        if(strpos($response,'aria-label="禁用多合一SEO包">禁用</a>')!==false){
+        if(strpos($response,'多合一SEO包">禁用</a>')!==false){
             $this->plugin_aioseo_edit_old();//编辑
-    	    return true;
+            return true;
         }
         // preg_match('/>3.7.1版本 \| 作者：<a href=".*?">All in One SEO Team<\/a>/',$aa,$mat);
         // if(isset($mat[0]) && $mat[0]){
@@ -766,7 +779,7 @@ class WordPress{
         // }
         
         echo $this->err .= $this->domain.">>>>设置aioseo插件失败,未检测到此插件\r\n";
-	    return false;
+        return false;
     }
     
     //启用aioseo插件(old)3.7.1版本
@@ -928,18 +941,16 @@ class WordPress{
         //启用aioseo插件(new)
         $p_url=$this->home_page.'/wp-admin/'.str_replace('&amp;','&',$mat[2]);
         $response=$this->curl_get($p_url);
-        
-        // $p_url=$this->home_page.'/wp-admin/plugins.php';
-        // $response=$this->curl_get($p_url);
-        // if(strpos($response,'aria-label="禁用多合一SEO集">禁用</a>')!==false){
-        //     echo "启用aioseo插件(new)成功\r\n";
-        // }else{
-        //     echo $this->err.=$this->domain.">>>>启用aioseo插件(new)失败2\r\n";
-        // }
-        
-        echo "启用aioseo插件(new)成功\r\n";
+        if(strpos($response,'AIOSEO &rsaquo; 入門導向')!==false || strpos($response,'插件已启用')!==false || strpos($response,'您点击的链接已过期')!==false){
+            echo "启用aioseo插件(new)成功\r\n";
+        }else{
+            // file_put_contents(__DIR__.'/tmp2.txt',$response);
+            echo $this->err.=$this->domain.">>>>启用aioseo插件(new)失败2\r\n";
+            return false;
+        }
+        // 初始化
+        //
         return true;
-
     }
     
     // 设置aioseo插件(new)4.2.9版本
@@ -988,10 +999,10 @@ class WordPress{
         
         $p_url=$this->home_page.'/wp-json/aioseo/v1/options';
         $p_data=[
-        	'options' => $arr['options'],
-        	'dynamicOptions' => $arr['dynamicOptions'],
-        	'network' => false,
-        	'networkOptions' => array(),
+            'options' => $arr['options'],
+            'dynamicOptions' => $arr['dynamicOptions'],
+            'network' => false,
+            'networkOptions' => array(),
         ];
         $p_data=json_encode($p_data);
         $header=array(

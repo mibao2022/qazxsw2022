@@ -2,7 +2,7 @@
 /**
  * 
  * 
- * 修改网站名称,修改All in One SEO插件TDK信息
+ * 修改wp网站名称,修改All in One SEO插件TDK信息
 
 
 
@@ -21,7 +21,8 @@ $cof_admin_password='admin222.!';
 //网站邮箱 留空使用随机数
 $cof_blog_email='';
 
-//设置建站域名文件* (内容格式:域名****网站名称****网站标题****网站关键词****描述)
+//创建配置文件,放到当前文件目录
+//内容格式:域名****网站名称****网站标题****网站关键词****描述
 $cof_site_file='site.txt';
 //------------------设置结束----------------------
 //------------------------------------------------
@@ -208,7 +209,8 @@ class WordPress{
             return true;
         }
         
-        return true;
+        echo $this->err.=$this->domain." 网站未启用all in one seo插件\r\n";
+        return false;
     }
 
     //常规设置
